@@ -4,3 +4,6 @@ psycopg2
 python-dotenv
 requests
 sqlalchemy
+tqdm
+networkx
+beautifulsoup4
