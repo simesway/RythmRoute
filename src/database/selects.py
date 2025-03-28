@@ -1,7 +1,8 @@
 from src.database.db import SessionLocal
 from sqlalchemy import select, and_, or_
+from sqlalchemy.orm import aliased
 
-from src.database.models import Genre, ArtistInGenre, Artist
+from src.database.models import Genre, ArtistInGenre, Artist, RelationshipTypeEnum, GenreRelationship
 from src.scraping.helper import normalize_genre_name
 
 
@@ -37,3 +38,47 @@ def find_matching_genre(session, genre: str):
 
 def find_matching_artist(session, artist: str):
   return session.query(Artist).filter(Artist.name == artist).first()
+
+def get_all_genre_relationships(session, relationship_type: RelationshipTypeEnum):
+  g1 = aliased(Genre)
+  g2 = aliased(Genre)
+  stmt = (
+    select(
+      g1, GenreRelationship.relationship, g2
+    ).where(GenreRelationship.relationship == relationship_type)
+    .join(g1, g1.id == GenreRelationship.genre1_id)
+    #.where(g1.organic_value < 2800)
+    .join(g2, g2.id == GenreRelationship.genre2_id)
+    #.where(g1.organic_value < 2800)
+  )
+
+  relationships = session.execute(stmt).all()
+  return relationships
+
+def get_main_genres(session):
+  """Fetch genres that don't appear as id2 (i.e., they aren't subgenres)."""
+  subquery = session.query(GenreRelationship.genre1_id).distinct()
+  return session.query(Genre).where(Genre.mb_id != None).filter(Genre.id.not_in(subquery)).all()
+
+
+def get_subgenres(session, genre_id):
+  g1 = aliased(Genre)
+  g2 = aliased(Genre)
+  stmt = (
+    select(g1, GenreRelationship.relationship)
+    .join(g1, g1.id == GenreRelationship.genre1_id)
+    .join(g2, g2.id == GenreRelationship.genre2_id)
+    .where(g2.id == genre_id)
+  )
+  relationships = session.execute(stmt).all()
+  return relationships
+
+
+def get_related_genres(session, genre_id):
+  """Fetch genres connected to a given genre by any relationship type."""
+  return (
+    session.query(Genre, GenreRelationship.type)
+    .join(GenreRelationship, Genre.id == GenreRelationship.id2)
+    .filter(GenreRelationship.id1 == genre_id)
+    .all()
+  )

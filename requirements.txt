@@ -2,8 +2,15 @@ bs4
 pandas
 psycopg2
 python-dotenv
+python-louvain
+fastapi
 requests
 sqlalchemy
+scipy
 tqdm
 networkx
+uvicorn
+pygraphviz
+pydot
+spotipy
 beautifulsoup4

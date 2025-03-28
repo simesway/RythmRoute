@@ -32,6 +32,9 @@ class Genre(Base):
 
   artists: Mapped[list["ArtistInGenre"]] = relationship("ArtistInGenre", back_populates="genre")
 
+  def __repr__(self) -> str:
+    return self.name
+
 class GenreRelationship(Base):
   __tablename__ = "genre_genre"
 
