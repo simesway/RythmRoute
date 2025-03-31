@@ -5,6 +5,7 @@ python-dotenv
 python-louvain
 fastapi
 requests
+redis
 sqlalchemy
 scipy
 tqdm
@@ -12,5 +13,6 @@ networkx
 uvicorn
 pygraphviz
 pydot
+pydantic
 spotipy
 beautifulsoup4
