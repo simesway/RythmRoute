@@ -39,6 +39,14 @@ def find_matching_genre(session, genre: str):
 def find_matching_artist(session, artist: str):
   return session.query(Artist).filter(Artist.name == artist).first()
 
+def get_all_mb_genres(session):
+  stmt = select(Genre).filter(Genre.mb_id.isnot(None))
+  return session.execute(stmt).all()
+
+def get_all_relationships(session):
+  stmt = select(GenreRelationship)
+  return session.execute(stmt).all()
+
 def get_all_genre_relationships(session, relationship_type: RelationshipTypeEnum):
   g1 = aliased(Genre)
   g2 = aliased(Genre)

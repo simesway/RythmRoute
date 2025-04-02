@@ -1,14 +1,17 @@
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
-from src.routes import graph
 from src.api.GenreMap import GenreMap
+from src.models.graph import to_json, G
 
-router = APIRouter(prefix="/api", default_response_class=JSONResponse)
-
-router.include_router(graph.router)
+router = APIRouter(prefix="/graph", default_response_class=JSONResponse)
 
 genre_map = GenreMap()
+
+
+@router.get("/entire_graph")
+async def get_entire_graph():
+  return to_json(G)
 
 @router.get("/genre/{genre_id}")
 async def get_subgenres(genre_id: int):
