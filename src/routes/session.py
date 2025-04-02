@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Request, HTTPException, Response
 import uuid
 from src.config import SESSION_EXPIRE_TIME, SESSION_COOKIE_NAME
-from src.services.redis_client import save_session, get_session, delete_session
-
+from src.models.session_data import SessionData
+from src.services.session_manager import store_session, get_session, delete_session
 
 router = APIRouter(prefix="/session")
 
@@ -18,7 +18,7 @@ async def get_session_id(request: Request) -> str:
 async def start_session(response: Response):
   """Create a new session and store it in a cookie."""
   session_id = str(uuid.uuid4())
-  await save_session(session_id, {"session_id": session_id}, SESSION_EXPIRE_TIME)
+  await store_session(session_id, SessionData(session_id=session_id))
 
   response.set_cookie(
     key="session_id",
