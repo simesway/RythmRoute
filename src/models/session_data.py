@@ -4,6 +4,9 @@ from pydantic import BaseModel
 from typing import Optional, List
 
 
+class SelectionData(BaseModel):
+  genres: List[int] = []
+
 class SpotifySessionData(BaseModel):
   access_token: str
   token_type: str
@@ -14,5 +17,5 @@ class SpotifySessionData(BaseModel):
 
 class SessionData(BaseModel):
   session_id: str
-  selected_genres: Optional[List[int]] = None
+  selection: SelectionData = SelectionData()
   spotify: Optional[SpotifySessionData] = None

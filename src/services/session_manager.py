@@ -6,8 +6,9 @@ from src.services.redis_client import redis_client
 from src.models.session_data import SessionData
 
 
-async def store_session(session_id: str, session_data: SessionData):
+async def store_session(session_data: SessionData):
   """Stores validated session data in Redis."""
+  session_id = session_data.session_id
   session_dict = session_data.model_dump_json()  # Convert to dictionary
   await redis_client.set(session_id, session_dict)
 

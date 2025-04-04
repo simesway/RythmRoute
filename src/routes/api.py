@@ -1,12 +1,14 @@
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
-from src.routes import graph
+from src.routes import graph, select
 from src.api.GenreMap import GenreMap
 
 router = APIRouter(prefix="/api", default_response_class=JSONResponse)
 
 router.include_router(graph.router)
+
+router.include_router(select.router)
 
 genre_map = GenreMap()
 

@@ -51,7 +51,7 @@ async def save_spotify_session(session_id: str, spotify_session: SpotifySessionD
   """Merge Spotify session into the existing Redis session."""
   session = await get_session(session_id)
   session.spotify = spotify_session
-  await store_session(session_id, session)
+  await store_session(session)
 
 
 @router.get("/login")
