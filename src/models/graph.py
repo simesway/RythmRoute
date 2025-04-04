@@ -1,24 +1,22 @@
 import networkx as nx
+from networkx.classes import Graph
 from networkx.drawing.nx_agraph import graphviz_layout
 from threading import Lock
 
 from networkx.readwrite import json_graph
 from typing import Optional
 
-import json
-
 from src.database.db import SessionLocal
 from src.database.models import Genre, RelationshipTypeEnum
 from src.database.selects import get_all_mb_genres, get_all_relationships
 
 
+starting_genres = [1, 3, 5, 20, 99, 114, 151, 379, 523, 6598]
+
 # Global graph instance + lock for safe access
 G = nx.Graph()
 lock = Lock()
 
-
-def add_genre(genre: Genre):
-  global G
 
 
 def add_relationship(genre1: Genre, rel_type: RelationshipTypeEnum, genre2: Genre):
@@ -45,7 +43,7 @@ def load_graph():
     o = (genre.organic_value - o_min) / (o_max - o_min) if genre.organic_value else None
     G.add_node(
       genre.id,
-      label=genre.name,
+      name=genre.name,
       bouncy_value=b,
       organic_value=o,
     )
@@ -86,13 +84,20 @@ def get_layout(graph: nx.Graph) -> dict:
 
   return scaled
 
+def create_initial_graph() -> Graph:
+  global G
+  with lock:
+    return G.subgraph(starting_genres)
+
 
 def to_json(graph: Optional[nx.Graph]):
-  if graph is None:
-    global G
-  else:
-    G = graph
+  with lock:
+    if graph is None:
+      global G
+      g = G
+    else:
+      g = graph
 
-  node_edges = json_graph.node_link_data(G)
-  layout = get_layout(G)
-  return {"node_edges": node_edges, "layout": layout}
+    node_edges = json_graph.node_link_data(g)
+    layout = get_layout(g)
+    return {"graph": node_edges, "layout": layout}
