@@ -90,7 +90,7 @@ class StartingGenresStrategy(DisplayStrategy):
         if current in all_descendants:
           continue
         all_descendants.add(current)
-        stack.extend(graph.predecessors(current))
+        stack.extend(graph.successors(current))
     return nodes - all_descendants
 
   def generate_subgraph(self, session: SessionData):
@@ -115,7 +115,7 @@ class StartingGenresStrategy(DisplayStrategy):
     with GenreGraph(RelationshipTypeEnum.SUBGENRE_OF.value) as G:
       for node in expanded:
         if G.has_node(node):
-          all_nodes.update(G.predecessors(node))
+          all_nodes.update(G.successors(node))
 
       self.prune_descendants(G, expanded, all_nodes)
 

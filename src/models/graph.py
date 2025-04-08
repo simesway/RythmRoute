@@ -60,7 +60,7 @@ class GenreGraph:
         g1 = next((genre[0] for genre in genres if genre[0].id == rel.genre1_id), None)
         g2 = next((genre[0] for genre in genres if genre[0].id == rel.genre2_id), None)
         weight = cls.compute_weight(g1, g2) if g1 and g2 else 0
-        cls.G.add_edge(rel.genre1_id, rel.genre2_id, weight=weight, type=rel.relationship.value)
+        cls.G.add_edge(rel.genre2_id, rel.genre1_id, weight=weight, type=rel.relationship.value)
 
       cls._initialize_subgraphs()
 
