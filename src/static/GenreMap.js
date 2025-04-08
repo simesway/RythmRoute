@@ -54,7 +54,7 @@ class Genre {
 
         circle(x, y, r);
 
-        strokeWeight(5);
+        strokeWeight(3);
         stroke(0)
         fill(255);
         textAlign(CENTER, CENTER);
@@ -147,7 +147,7 @@ class GenreMap {
                 if (index !== -1) this.drawQueue.splice(index, 1);
             }
         }
-        this.relationships = relationships.map(edge => [Number(edge.source), Number(edge.target)]);
+        this.relationships = relationships;
     }
 
     drawDashedLineFlow(x1, y1, x2, y2, dashLength = 10, gap = 5, speed = 2) {
@@ -162,8 +162,6 @@ class GenreMap {
       push();
       translate(x1, y1);
       rotate(angle);
-      stroke(rel_color);
-      strokeWeight(4);
 
       while (current < len) {
         let start = current;
@@ -182,9 +180,33 @@ class GenreMap {
         for (const relationship of this.relationships) {
             strokeWeight(1);
             stroke(0);
-            let source = this.genres.get(relationship[0]);
-            let target = this.genres.get(relationship[1]);
+            let source = this.genres.get(relationship.source);
+            let target = this.genres.get(relationship.target);
             if (source && target) {
+                strokeWeight(2);
+                if (source.selected && target.selected) {
+                    strokeWeight(4);
+                }
+                switch (relationship.type) {
+                  case "SUBGENRE_OF":
+                      strokeWeight(4);
+                      stroke(0, 255, 0);
+
+                    break;
+                  case "INFLUENCED_BY":
+                      strokeWeight(2);
+                      stroke(255, 0, 0);
+                    // code for case "b"
+                    break;
+                case "FUSION_OF":
+                    strokeWeight(3);
+                  stroke(0, 0, 255);
+
+                break;
+                  default:
+                      stroke(0);
+                    // code if no case matches
+                }
                 this.drawDashedLineFlow(source.x * w + pad, source.y * h + pad, target.x * w + pad, target.y * h + pad, 10, 5, 0.5)
             }
             if (false && source && target) {
