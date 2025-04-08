@@ -1,3 +1,5 @@
+let rel_color = "#016FB9"
+
 class Genre {
     constructor(id, name, x, y, r) {
         this.id = id;
@@ -9,6 +11,9 @@ class Genre {
         this.target_x = x;
         this.target_y = y;
 
+        this.text_bbox;
+
+        this.depth = 8;
         this.selected = false;
         this.expanded = false;
         this.isExpandable = false;
@@ -31,27 +36,30 @@ class Genre {
     }
 
     draw(pad, w, h) {
-        strokeWeight(2);
-        stroke(100);
-        noFill();
+        let x = this.x * w + pad;
+        let y = this.y * h + pad;
+        let r = this.isExpandable ? 20 : 13;
+
+        fill(255)
+        stroke(0)
         if (this.selected) {
-            strokeWeight(2);
-            stroke(255, 0, 0);
+            fill("#FF6500");
         }
         if (this.expanded) {
-            fill(0, 255, 255)
+            stroke(rel_color);
         }
-        let n = 2;
-        if (this.isExpandable) {
-            rect(this.x * w + pad, this.y * h + pad, this.r * n, this.r * n)
+        if (!this.isExpandable) {
+            noStroke()
         }
-        circle(this.x * w + pad, this.y * h + pad, this.r * n);
+
+        circle(x, y, r);
+
         strokeWeight(5);
-        stroke(0);
+        stroke(0)
         fill(255);
         textAlign(CENTER, CENTER);
         textSize(15);
-        text(this.name, this.x * w + pad, this.y * h + pad - 10);
+        text(this.name, x, y - r);
     }
 }
 
@@ -67,6 +75,8 @@ class GenreMap {
         this.expanded = [];
 
         this.init_graph()
+
+        this.drawQueue = [];
     }
 
     update(rate) {
@@ -101,7 +111,6 @@ class GenreMap {
         genres.forEach(genre => {
             let isSelected = selected.includes(genre.id);
             let isExpanded = expanded.includes(genre.id);
-            let isSpotifyGenre = genre.spotify_genre
             if (this.genres.has(genre.id)) {
                 let existing_genre = this.genres.get(genre.id);
                 let pos = layout[genre.id];
@@ -121,10 +130,12 @@ class GenreMap {
 
                 let g = new Genre(genre.id, genre.name, x, y, 10);
                 g.set_target(pos.x, pos.y);
-                g.isExpandable = genre.has_children;
+                g.isExpandable = genre.has_subgenres;
                 g.selected = isSelected;
                 g.expanded = isExpanded;
+                g.depth = genre.depth;
                 this.genres.set(genre.id, g);
+                this.drawQueue.push(genre.id)
             }
         });
 
@@ -132,9 +143,35 @@ class GenreMap {
         for (let id of this.genres.keys()) {
             if (!validIds.has(id)) {
                 this.genres.delete(id);
+                let index = this.drawQueue.indexOf(id);
+                if (index !== -1) this.drawQueue.splice(index, 1);
             }
         }
         this.relationships = relationships.map(edge => [Number(edge.source), Number(edge.target)]);
+    }
+
+    drawDashedLineFlow(x1, y1, x2, y2, dashLength = 10, gap = 5, speed = 2) {
+      let dx = x2 - x1;
+      let dy = y2 - y1;
+      let len = dist(x1, y1, x2, y2);
+      let angle = atan2(dy, dx);
+
+      let offset = frameCount * speed % (dashLength + gap);
+      let current = offset;
+
+      push();
+      translate(x1, y1);
+      rotate(angle);
+      stroke(rel_color);
+      strokeWeight(4);
+
+      while (current < len) {
+        let start = current;
+        let end = min(current + dashLength, len);
+        line(start, 0, end, 0);
+        current += dashLength + gap;
+      }
+      pop();
     }
 
     draw() {
@@ -148,6 +185,9 @@ class GenreMap {
             let source = this.genres.get(relationship[0]);
             let target = this.genres.get(relationship[1]);
             if (source && target) {
+                this.drawDashedLineFlow(source.x * w + pad, source.y * h + pad, target.x * w + pad, target.y * h + pad, 10, 5, 0.5)
+            }
+            if (false && source && target) {
                 if (source.selected && target.selected) {
                     strokeWeight(3);
                     stroke(0, 0, 255);
@@ -156,9 +196,10 @@ class GenreMap {
             }
         }
 
+        console.log(this.drawQueue)
+        for (let item of [...this.drawQueue].reverse()) {
 
-        for (let genre of this.genres.values()) {
-            genre.draw(pad, w, h);
+            this.genres.get(item).draw(pad, w, h);
         }
     }
 
@@ -183,6 +224,21 @@ class GenreMap {
         }
         if (key === 'c' || key === 'C') { // Check if the "X" key is pressed
             this.update_with("api/graph/collapse_all")
+        }
+    }
+
+    mouseMoved() {
+        let pad = 64;
+        let w = width - 2 * pad;
+        let h = height - 2 * pad;
+        for (let genre of this.genres.values()) {
+            if (genre.isHovered(mouseX, mouseY, w, h, pad)) {
+                let index = this.drawQueue.indexOf(genre.id);
+                if (index !== -1) {
+                    const [elem] = this.drawQueue.splice(index, 1);
+                    this.drawQueue.unshift(elem);
+                }
+            }
         }
     }
 }

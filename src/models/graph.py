@@ -1,5 +1,6 @@
 import networkx as nx
 from threading import Lock
+from collections import deque
 from src.database.db import SessionLocal
 from src.database.models import RelationshipTypeEnum, Genre
 from src.database.selects import get_all_mb_genres, get_all_relationships
@@ -10,6 +11,7 @@ class GenreGraph:
   G = nx.DiGraph()
   lock = Lock()
   subgraphs = {}
+  roots = set()
 
   def __init__(self, subgraph_type=None):
     self.subgraph_type = subgraph_type
@@ -69,6 +71,24 @@ class GenreGraph:
     G = cls.subgraph(RelationshipTypeEnum.SUBGENRE_OF.value)
     for node in cls.G.nodes():
       cls.G.nodes[node]["has_subgenres"] = node in G.nodes and any(G.successors(node))
+
+    cls.roots = [n for n in G.nodes if G.in_degree(n) == 0]
+    depths = {}
+
+    # Perform BFS from each root to assign depths
+    for root in cls.roots:
+      queue = deque([(root, 0)])  # (node, depth)
+      while queue:
+        node, depth = queue.popleft()
+        if node not in depths:  # Only set depth if it's not already set
+          depths[node] = depth
+        # Add neighbors to the queue with incremented depth
+        for neighbor in G.neighbors(node):
+          if neighbor not in depths:
+            queue.append((neighbor, depth + 1))
+
+    # Set the depth as a node attribute
+    nx.set_node_attributes(cls.G, depths, 'depth')
 
   @classmethod
   def _initialize_subgraphs(cls):
