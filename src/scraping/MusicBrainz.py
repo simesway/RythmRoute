@@ -62,10 +62,3 @@ def get_genre_page(url: str, mb_id: str=""):
           relationships.append((genre, "influenced genre"))
 
   return relationships
-
-
-
-if __name__ == "__main__":
-  url = "https://musicbrainz.org/genre/52faa157-6bad-4d86-a0ab-d4dec7d2513c"
-  genres = get_genre_page(url, "dings")
-  print(genres)

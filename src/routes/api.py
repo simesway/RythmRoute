@@ -20,7 +20,6 @@ async def get_subgenres(genre_id: int):
 @router.get("/subgenres/{genre_id}")
 async def get_subgenres(genre_id: int):
   genre_map.add_subgenres(genre_id)
-  print(genre_map.genres)
   return genre_map.get_json()
 
 @router.get("/reset")

@@ -11,5 +11,3 @@ def normalize_genre_name(genre: str):
   genre_spaces = genre.replace("-", " ")  # Replace hyphens with spaces
   genre_hyphens = genre.replace(" ", "-")  # Replace spaces with hyphens
   return genre_spaces, genre
-
-print(normalize_genre_name("nueva canción lo-fi hip höp"))

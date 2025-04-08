@@ -74,7 +74,6 @@ class GenreGraph:
   def _initialize_subgraphs(cls):
     cls.subgraphs.clear()
     edge_types = [relationship.value for relationship in RelationshipTypeEnum]
-    print(edge_types)
     for edge_type in edge_types:
       nodes = {
                 u for u, v, d in cls.G.edges(data=True) if d.get("type") == edge_type
@@ -89,9 +88,7 @@ class GenreGraph:
   def subgraph(cls, graph_type):
     """ Context manager to switch to a specific edge type subgraph. """
     if graph_type not in cls.subgraphs:
-      return None  # No such edge type
-    print(graph_type)
-    print(cls.subgraphs.keys())
+      return None
 
     return cls.subgraphs[graph_type]
 
