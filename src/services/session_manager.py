@@ -1,7 +1,9 @@
 import json
-from fastapi import Request
+from fastapi import Request, Response
+from starlette.responses import RedirectResponse
 from typing import Optional
 
+from src.config import SESSION_EXPIRE_TIME
 from src.services.redis_client import redis_client
 from src.models.session_data import SessionData
 
@@ -10,7 +12,7 @@ async def store_session(session_data: SessionData):
   """Stores validated session data in Redis."""
   session_id = session_data.session_id
   session_dict = session_data.model_dump_json()  # Convert to dictionary
-  await redis_client.set(session_id, session_dict)
+  await redis_client.setex(session_id, SESSION_EXPIRE_TIME, session_dict)
 
 async def get_req_session(request: Request) -> Optional[SessionData]:
   session_id = await get_session_id(request)
@@ -19,11 +21,11 @@ async def get_req_session(request: Request) -> Optional[SessionData]:
   else:
     return None
 
-async def get_session_id(request: Request) -> str:
+async def get_session_id(request: Request) -> Optional[str]:
   """Retrieve session_id from cookies."""
   session_id = request.cookies.get("session_id")
   if not session_id:
-    raise ValueError("No session_id cookie")
+    return None
   return session_id
 
 async def get_session(session_id: str) -> SessionData:

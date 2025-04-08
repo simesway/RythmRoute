@@ -10,6 +10,8 @@ class Genre {
         this.target_y = y;
 
         this.selected = false;
+        this.expanded = false;
+        this.isExpandable = false;
     }
 
     set_target(x, y) {
@@ -22,19 +24,34 @@ class Genre {
         this.y = lerp(this.y, this.target_y, rate)
     }
 
-    show(radius, label) {
-        if (radius) {
-            noFill();
+    isHovered(px, py, w, h, pad) {
+        const gx = this.x * w + pad;
+        const gy = this.y * h + pad;
+        return dist(px, py, gx, gy) <= this.r * 2;
+    }
+
+    draw(pad, w, h) {
+        strokeWeight(2);
+        stroke(100);
+        noFill();
+        if (this.selected) {
+            strokeWeight(2);
             stroke(255, 0, 0);
-            strokeWeight(3);
-            ellipse(this.x, this.y, this.r * 2, this.r * 2);
         }
-        if (label) {
-            fill(0, 0, 255);
-            textAlign(CENTER);
-            textSize(10);
-            text(this.name, this.x, this.y);
+        if (this.expanded) {
+            fill(0, 255, 255)
         }
+        let n = 2;
+        if (this.isExpandable) {
+            rect(this.x * w + pad, this.y * h + pad, this.r * n, this.r * n)
+        }
+        circle(this.x * w + pad, this.y * h + pad, this.r * n);
+        strokeWeight(5);
+        stroke(0);
+        fill(255);
+        textAlign(CENTER, CENTER);
+        textSize(15);
+        text(this.name, this.x * w + pad, this.y * h + pad - 10);
     }
 }
 
@@ -45,6 +62,9 @@ class GenreMap {
         this.genres = new Map();
         this.relationships = [];
         this.radius = 10;
+
+        this.selected = [];
+        this.expanded = [];
 
         this.init_graph()
     }
@@ -59,71 +79,74 @@ class GenreMap {
         fetch("/api/reset")
     }
 
-    add_genre(genre_id) {
-        fetch(`/api/select/genre/${genre_id}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json', // Set the request type to JSON
-          },
-          body: JSON.stringify(genre_id), // Convert the data to a JSON string
-        });
-    }
-
-    add_subgenres(genre_id) {
-        fetch(`/api/subgenres/${genre_id}`)
+    update_with(url) {
+        fetch(url)
         .then(response => response.json())
-        .then(data => {this.update_graph(data, genre_id)});
+        .then(data => {this.update_graph(data)});
     }
 
     init_graph() {
-        fetch(`/api/graph/initial_graph/`)
-        .then(response => response.json())
-        .then(data => {this.update_graph(data)});
+        this.update_with(`/api/graph/initial_graph/`);
     }
 
     update_graph(json_data) {
         let genres = json_data.graph.nodes;
         let relationships = json_data.graph.links;
         let layout = json_data.layout;
+        let data = json_data.data;
+        let expanded = data.expanded;
+        let selected = data.selected;
 
 
         genres.forEach(genre => {
-          if (this.genres.has(genre.id)) {
-              let existing_genre = this.genres.get[genre.id];
-              let pos = layout[genre.id]
-              existing_genre.set_target(pos.x, pos.y)
-          } else {
-              let x = 0.5;
-              let y = 0.5;
-              let pos = layout[genre.id];
+            let isSelected = selected.includes(genre.id);
+            let isExpanded = expanded.includes(genre.id);
+            let isSpotifyGenre = genre.spotify_genre
+            if (this.genres.has(genre.id)) {
+                let existing_genre = this.genres.get(genre.id);
+                let pos = layout[genre.id];
+                existing_genre.set_target(pos.x, pos.y);
+                existing_genre.selected = isSelected;
+                existing_genre.expanded = isExpanded;
+            } else {
+                let x = 0.5;
+                let y = 0.5;
+                let pos = layout[genre.id];
 
-              let rel = relationships.find(item => item.target === genre.id);
-              if (rel) {
-                  x = layout[rel.source].x
-                  y = layout[rel.source].y
-              }
+                let rel = relationships.find(r => r.target === genre.id);
+                if (rel) {
+                    x = layout[rel.source].x;
+                    y = layout[rel.source].y;
+                }
 
-              let new_genre = new Genre(genre.id, genre.name, x, y, 10);
-              new_genre.set_target(pos.x, pos.y);
-              this.genres.set(genre.id, new_genre);
-          }
+                let g = new Genre(genre.id, genre.name, x, y, 10);
+                g.set_target(pos.x, pos.y);
+                g.isExpandable = genre.has_children;
+                g.selected = isSelected;
+                g.expanded = isExpanded;
+                this.genres.set(genre.id, g);
+            }
         });
-        this.relationships = relationships.map(edge => [Number(edge.source), Number(edge.target)]);
 
-        console.log(this.genres)
-        console.log(this.relationships)
+        const validIds = new Set(genres.map(g => g.id));
+        for (let id of this.genres.keys()) {
+            if (!validIds.has(id)) {
+                this.genres.delete(id);
+            }
+        }
+        this.relationships = relationships.map(edge => [Number(edge.source), Number(edge.target)]);
     }
 
-    show(dot) {
+    draw() {
         let pad = 64;
         let w = width - 2 * pad;
         let h = height - 2 * pad;
 
-        for (const [source_id, target_id, type] of this.relationships) {
+        for (const relationship of this.relationships) {
             strokeWeight(1);
             stroke(0);
-            let source = this.genres.get(String(source_id));
-            let target = this.genres.get(String(target_id));
+            let source = this.genres.get(relationship[0]);
+            let target = this.genres.get(relationship[1]);
             if (source && target) {
                 if (source.selected && target.selected) {
                     strokeWeight(3);
@@ -135,23 +158,7 @@ class GenreMap {
 
 
         for (let genre of this.genres.values()) {
-            strokeWeight(2);
-            if (dot) {
-                stroke(100);
-                noFill();
-                if (genre.selected) {
-                    strokeWeight(2);
-                    stroke(0, 0, 255);
-                }
-                let n = 2;
-                circle(genre.x * w + pad, genre.y * h + pad, genre.r * n);
-            }
-            strokeWeight(3);
-            stroke(0);
-            fill(255);
-            textAlign(CENTER, CENTER);
-            textSize(20);
-            text(genre.name, genre.x * w + pad, genre.y * h + pad - 10);
+            genre.draw(pad, w, h);
         }
     }
 
@@ -160,12 +167,22 @@ class GenreMap {
         let w = width - 2 * pad;
         let h = height - 2 * pad;
         for (let genre of this.genres.values()) {
-            let d = dist(mouseX, mouseY, genre.x * w + pad, genre.y * h + pad);
-            if (d <= genre.r * 2) {
-                this.add_genre(genre.id);
-              genre.selected = !genre.selected;
-              break;
+            if (genre.isHovered(mouseX, mouseY, w, h, pad)) {
+                if (mouseButton === RIGHT) {
+                    this.update_with(`/api/graph/genre/${genre.id}`);
+                } else if (mouseButton === LEFT) {
+                    this.update_with(`/api/graph/subgenres/${genre.id}`);
+                }
+                break;
             }
+        }
+    }
+    keyPressed() {
+        if (key === 'r' || key === 'R') { // Check if the "X" key is pressed
+            this.update_with("api/graph/reset")
+        }
+        if (key === 'c' || key === 'C') { // Check if the "X" key is pressed
+            this.update_with("api/graph/collapse_all")
         }
     }
 }
