@@ -5,7 +5,7 @@ from typing import Optional
 
 from src.config import SESSION_EXPIRE_TIME
 from src.services.redis_client import redis_client
-from src.models.session_data import SessionData
+from src.models.SessionData import SessionData
 
 
 async def store_session(session_data: SessionData):

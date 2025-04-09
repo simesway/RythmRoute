@@ -1,6 +1,6 @@
 from src.models.GenreDisplayStrategy import StartingGenresStrategy
 from src.models.SessionResponse import SessionResponse
-from src.models.session_data import SessionData
+from src.models.SessionData import SessionData
 
 
 def create_SessionResponse(session: SessionData) -> SessionResponse:

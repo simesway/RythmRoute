@@ -4,7 +4,7 @@ from spotipy.oauth2 import SpotifyOAuth
 from spotipy import Spotify
 from typing import Union
 import src.config as config
-from src.models.session_data import SpotifySessionData, SessionData
+from src.models.SessionData import SpotifySessionData, SessionData
 from src.services.session_manager import store_session, get_session, get_session_id, get_req_session
 from datetime import datetime, timezone
 

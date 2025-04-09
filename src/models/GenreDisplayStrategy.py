@@ -8,7 +8,7 @@ from typing import List
 from src.database.models import RelationshipTypeEnum
 from src.models.SessionResponse import GenreGraphData, Genre, GenreRelationship, Coordinate, GenreState
 from src.models.graph import GenreGraph
-from src.models.session_data import SessionData
+from src.models.SessionData import SessionData
 
 
 class DisplayStrategy(ABC):
