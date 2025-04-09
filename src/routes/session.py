@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, HTTPException, Response
+from fastapi import APIRouter, Request, HTTPException, Response, Depends
 import uuid
 from src.config import SESSION_EXPIRE_TIME, SESSION_COOKIE_NAME
 from src.models.SessionData import SessionData
@@ -32,15 +32,13 @@ async def start_session(response: Response):
 
 
 @router.get("/status")
-async def session_status(request: Request):
+async def session_status(request: Request, session: SessionData = Depends(get_session)):
   """Check if a session exists and return its data."""
-  session_id = await get_session_id(request)
-  session_data = await get_session(session_id)
 
-  if not session_data:
+  if not session:
     raise HTTPException(status_code=404, detail="Session expired or not found")
 
-  return {"session_id": session_id, "data": session_data}
+  return session
 
 
 @router.get("/stop")

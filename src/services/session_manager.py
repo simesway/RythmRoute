@@ -1,11 +1,31 @@
+import uuid
+
 import json
 from fastapi import Request, Response
-from starlette.responses import RedirectResponse
 from typing import Optional
 
 from src.config import SESSION_EXPIRE_TIME
 from src.services.redis_client import redis_client
 from src.models.SessionData import SessionData
+
+
+def set_session_cookie(session_id: str, response: Response):
+  response.set_cookie(
+    key="session_id",
+    value=session_id,
+    max_age=SESSION_EXPIRE_TIME,
+    httponly=True,
+    secure=True,
+    samesite="Lax"
+  )
+
+async def create_session(response: Response) -> SessionData:
+  session_id = str(uuid.uuid4())
+  session_data = SessionData(id=session_id)
+  await store_session(session_data)
+  set_session_cookie(session_id, response)
+  return session_data
+
 
 
 async def store_session(session_data: SessionData):
@@ -14,12 +34,19 @@ async def store_session(session_data: SessionData):
   session_dict = session_data.model_dump_json()  # Convert to dictionary
   await redis_client.setex(session_id, SESSION_EXPIRE_TIME, session_dict)
 
-async def get_req_session(request: Request) -> Optional[SessionData]:
-  session_id = await get_session_id(request)
-  if isinstance(session_id, str):
-    return await get_session(session_id)
-  else:
-    return None
+async def get_session(request: Request, response: Response) -> SessionData:
+  session_id = request.cookies.get("session_id")
+  if not session_id:
+    return await create_session(response)
+
+  try:
+    session_data = await get_session_from_id(session_id)
+
+    await store_session(session_data)
+    set_session_cookie(session_id, response)
+    return session_data
+  except ValueError:
+    return await create_session(response)
 
 async def get_session_id(request: Request) -> Optional[str]:
   """Retrieve session_id from cookies."""
@@ -28,7 +55,7 @@ async def get_session_id(request: Request) -> Optional[str]:
     return None
   return session_id
 
-async def get_session(session_id: str) -> SessionData:
+async def get_session_from_id(session_id: str) -> SessionData:
   """Retrieves and validates session data from Redis."""
   session_data = await redis_client.get(session_id)
   if session_data:

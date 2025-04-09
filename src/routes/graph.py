@@ -3,17 +3,15 @@ from fastapi.responses import JSONResponse
 
 from src.models.clientData import GraphUpdate
 from src.models.create_SessionResponse import create_SessionResponse
-from src.models.GenreDisplayStrategy import StartingGenresStrategy
-from src.models.SessionData import SessionData, GenreData
-from src.services.session_manager import get_req_session, store_session
+from src.models.SessionData import SessionData
+from src.services.session_manager import get_session, store_session
 
 router = APIRouter(prefix="/graph", default_response_class=JSONResponse)
 
 
 
-
 @router.post("/update")
-async def update_graph(request: GraphUpdate, session: SessionData = Depends(get_req_session)):
+async def update_graph(request: GraphUpdate, session: SessionData = Depends(get_session)):
   action = request.action
 
   if action == "expand":
@@ -37,8 +35,8 @@ async def update_graph(request: GraphUpdate, session: SessionData = Depends(get_
   return response
 
 @router.get("/current_state")
-async def get_current_graph(request: Request):
-  session = await get_req_session(request)
+async def get_current_graph(request: Request, session: SessionData = Depends(get_session)):
+  #session = await get_session(request)
   response = create_SessionResponse(session)
   return response
 

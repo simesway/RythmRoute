@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import RedirectResponse
 from spotipy.oauth2 import SpotifyOAuth
 from spotipy import Spotify
 from typing import Union
 import src.config as config
 from src.models.SessionData import SpotifySessionData, SessionData
-from src.services.session_manager import store_session, get_session, get_session_id, get_req_session
+from src.services.session_manager import store_session, get_session, get_session_id, get_session, get_session_from_id
 from datetime import datetime, timezone
 
 router = APIRouter(prefix="/spotify")
@@ -49,7 +49,7 @@ async def get_spotify_session(session: SessionData) -> Union[RedirectResponse, S
 
 async def save_spotify_session(session_id: str, spotify_session: SpotifySessionData):
   """Merge Spotify session into the existing Redis session."""
-  session = await get_session(session_id)
+  session = await get_session_from_id(session_id)
   session.spotify = spotify_session
   await store_session(session)
 
@@ -61,9 +61,8 @@ async def login():
   return RedirectResponse(auth_url)
 
 @router.get("/callback")
-async def callback(request: Request, code: str):
+async def callback(request: Request, code: str, session: SessionData = Depends(get_session)):
   """Handle Spotify authentication callback and store session in Redis."""
-  session_id = await get_session_id(request)
 
   token_info = auth_manager.get_access_token(code, check_cache=False)
   if not token_info:
@@ -74,8 +73,7 @@ async def callback(request: Request, code: str):
   refresh_token = token_info.get("refresh_token")
   if not refresh_token:
     # If there's no refresh_token, retrieve the old one (Spotify sometimes does this)
-    old_session = await get_session(session_id)
-    refresh_token = old_session.get("spotify", {}).get("refresh_token")
+    refresh_token = session.get("spotify", {}).get("refresh_token")
 
   spotify_session = SpotifySessionData(
     access_token=token_info["access_token"],
@@ -86,16 +84,14 @@ async def callback(request: Request, code: str):
     scope=token_info["scope"]
   )
 
-  await save_spotify_session(session_id, spotify_session)
+  await save_spotify_session(session.id, spotify_session)
 
   return RedirectResponse("/")
 
 
 @router.get("/current_user")
-async def get_current_user(request: Request):
+async def get_current_user(request: Request, session: SessionData = Depends(get_session)):
   """Get Spotify user profile info."""
-  session = await get_req_session(request)
-  print(session)
   sp_session = await get_spotify_session(session)
 
   if not sp_session:
@@ -108,7 +104,7 @@ async def get_current_user(request: Request):
 @router.get("/create_playlist")
 async def create_playlist(request: Request, name: str, public: bool = True):
   """Create a new Spotify playlist."""
-  session = await get_req_session(request)
+  session = await get_session(request)
   sp_session = await get_spotify_session(session)
 
   if not sp_session:
@@ -124,7 +120,7 @@ async def create_playlist(request: Request, name: str, public: bool = True):
 @router.get("/add_track")
 async def add_track(request: Request, playlist_id: str, track_id: str):
   """Add a track to a Spotify playlist."""
-  session = await get_req_session(request)
+  session = await get_session(request)
   sp_session = await get_spotify_session(session)
 
   if not sp_session:
