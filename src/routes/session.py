@@ -18,7 +18,7 @@ async def get_session_id(request: Request) -> str:
 async def start_session(response: Response):
   """Create a new session and store it in a cookie."""
   session_id = str(uuid.uuid4())
-  await store_session(SessionData(session_id=session_id))
+  await store_session(SessionData(id=session_id))
 
   response.set_cookie(
     key="session_id",

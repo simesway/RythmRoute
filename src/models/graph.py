@@ -70,7 +70,7 @@ class GenreGraph:
 
     G = cls.subgraph(RelationshipTypeEnum.SUBGENRE_OF.value)
     for node in cls.G.nodes():
-      cls.G.nodes[node]["has_subgenres"] = node in G.nodes and any(G.successors(node))
+      cls.G.nodes[node]["has_subgenre"] = node in G.nodes and any(G.successors(node))
 
     cls.roots = [n for n in G.nodes if G.in_degree(n) == 0]
     depths = {}

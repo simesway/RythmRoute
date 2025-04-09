@@ -42,7 +42,7 @@ async def get_spotify_session(session: SessionData) -> Union[RedirectResponse, S
       token_type=token_info["token_type"],
       scope=token_info["scope"]
     )
-    await save_spotify_session(session.session_id, spotify_session)
+    await save_spotify_session(session.id, spotify_session)
 
   return spotify_session
 

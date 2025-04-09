@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
+from src.models.create_SessionResponse import create_SessionResponse
 from src.models.graph_interaction import toggle_genre_selection
 from src.api.GenreMap import GenreMap
 from src.models.GenreDisplayStrategy import StartingGenresStrategy
@@ -17,6 +18,17 @@ def add_data_to_json(json, session: SessionData):
   json["data"] = session.genres
   return json
 
+@router.post("/update")
+async def update_graph(action, genre_id):
+  session = await get_req_session(request)
+  response = create_SessionResponse(session)
+  return response
+
+@router.get("/current_state")
+async def get_initial_graph(request: Request):
+  session = await get_req_session(request)
+  response = create_SessionResponse(session)
+  return response
 
 @router.get("/initial_graph")
 async def get_initial_graph(request: Request):

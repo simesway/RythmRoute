@@ -6,6 +6,7 @@ from networkx.readwrite import json_graph
 from typing import List
 
 from src.database.models import RelationshipTypeEnum
+from src.models.SessionResponse import GenreGraphData, Genre, GenreRelationship, Coordinate, GenreState
 from src.models.graph import GenreGraph
 from src.models.session_data import SessionData
 
@@ -39,6 +40,38 @@ class DisplayStrategy(ABC):
     layout = self.get_json_layout(subgraph)
     data = self.generate_data()
     return {"graph": node_edges, "layout": layout, "data": data}
+
+  def to_GenreGraphData(self, session: SessionData) -> GenreGraphData:
+    subgraph = self.generate_subgraph(session)
+    node_edges = json_graph.node_link_data(subgraph)
+    layout = self.get_json_layout(subgraph)
+
+    genres = [
+      Genre(
+        id=genre["id"],
+        name=genre["name"],
+        has_subgenre=genre["has_subgenre"],
+      )
+      for genre in node_edges.get("nodes", [])
+    ]
+    relations = [
+      GenreRelationship(
+        source=rel["source"],
+        target=rel["target"],
+        type=rel["type"]
+      )
+      for rel in node_edges.get("links", [])
+    ]
+    layout = {
+      genre_id: Coordinate(x=pos["x"], y=pos["y"])
+      for genre_id, pos in layout.items()
+    }
+    state = GenreState(
+      selected=session.genres.selected,
+      expanded=session.genres.expanded
+    )
+
+    return GenreGraphData(genres=genres, relationships=relations, layout=layout, state=state)
 
   @staticmethod
   def normalize_layout(layout: dict) -> dict:

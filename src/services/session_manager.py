@@ -10,7 +10,7 @@ from src.models.session_data import SessionData
 
 async def store_session(session_data: SessionData):
   """Stores validated session data in Redis."""
-  session_id = session_data.session_id
+  session_id = session_data.id
   session_dict = session_data.model_dump_json()  # Convert to dictionary
   await redis_client.setex(session_id, SESSION_EXPIRE_TIME, session_dict)
 
