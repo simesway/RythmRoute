@@ -67,13 +67,8 @@ class DisplayStrategy(ABC):
       genre_id: Coordinate(x=pos["x"], y=pos["y"])
       for genre_id, pos in layout.items()
     }
-    state = GenreState(
-      selected=session.genres.selected,
-      expanded=session.genres.expanded,
-      highlight=session.genres.highlight
-    )
 
-    return GenreGraphData(genres=genres, relationships=relations, layout=layout, state=state)
+    return GenreGraphData(genres=genres, relationships=relations, layout=layout)
 
   @staticmethod
   def normalize_layout(layout: dict) -> dict:

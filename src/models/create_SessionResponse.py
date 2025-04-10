@@ -8,6 +8,6 @@ def create_SessionResponse(session: SessionData) -> SessionResponse:
     session = SessionData(id="temp")
 
   genre_graph_data = StartingGenresStrategy().to_GenreGraphData(session)
-
+  genre_graph_data.state = session.genres
 
   return SessionResponse(graph=genre_graph_data)

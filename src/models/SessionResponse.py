@@ -1,5 +1,6 @@
 from typing import Optional, Dict, List
 
+from src.models.SessionData import GenreData
 from pydantic import BaseModel
 
 
@@ -27,7 +28,7 @@ class GenreGraphData(BaseModel):
   genres: List[Genre]
   relationships: List[GenreRelationship]
   layout: Dict[int, Coordinate]
-  state: GenreState = GenreState()
+  state: GenreData = GenreData()
 
 class SessionResponse(BaseModel):
   graph: Optional[GenreGraphData]
