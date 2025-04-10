@@ -25,6 +25,13 @@ class GenreGraph:
     self.lock.release()
     return False
 
+  def get_genre_id(self, name):
+    with self as g:
+      for genre in g.nodes():
+        if g.nodes[genre]['name'] == name:
+          return genre
+    return None
+
   @staticmethod
   def compute_weight(genre1: Genre, genre2: Genre):
     if genre1.bouncy_value and genre2.bouncy_value:
@@ -54,7 +61,8 @@ class GenreGraph:
           genre.id,
           name=genre.name,
           bouncy_value=b,
-          organic_value=o
+          organic_value=o,
+          description=genre.description
         )
 
       for rel in relationships:

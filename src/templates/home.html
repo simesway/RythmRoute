@@ -5,19 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Green River Collective</title>
     <script src="../static/p5.js"></script>
-    <style>
-        html, body {
-  margin: 0;
-  padding: 0;.
-}
-canvas {
-  display: block;
-}
-    </style>
+    <link rel="stylesheet" href="../static/styles.css">
 </head>
 <body>
+    <div class="container">
+    <div class="row">
+      <div id="left-sketch-1"></div>
+      <div class="right-panel">
+          <input id="genre-query" type="text" placeholder="Search..">
+          <button onclick="search_genre()">Send Data</button>
+
+        <h1 id="genre-name">Lars, das ist mir egal</h1>
+        <p id="genre-description">ob du kaffee trinks oder nicht, du bleibst ein kek.!!.</p>
+      </div>
+    </div>
+
+    <div class="row">
+      <div id="left-sketch-2"></div>
+      <div class="right-panel">
+        <h1>Panel 2</h1>
+        <p>Information for the second row goes here.</p>
+      </div>
+    </div>
+
+    <div class="row">
+      <div id="left-sketch-3"></div>
+      <div class="right-panel">
+        <h1>Panel 3</h1>
+        <p>Information for the third row goes here.</p>
+      </div>
+    </div>
+  </div>
     <script src="../static/SessionManager.js" defer></script>
     <script src="../static/GenreMap.js" defer></script>
-    <script src="../static/p5_genre_map.js" defer></script>
+    <script src="../static/GenreMap_sketch.js" defer></script>
+    <script src="../static/sendData.js"></script>
+
 </body>
 </html>

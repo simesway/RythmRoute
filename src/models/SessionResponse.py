@@ -6,6 +6,7 @@ from pydantic import BaseModel
 class GenreState(BaseModel):
   selected: List[int] = []
   expanded: List[int] = []
+  highlight: Optional[int] = None
 
 class GenreRelationship(BaseModel):
   source: int
@@ -15,6 +16,7 @@ class GenreRelationship(BaseModel):
 class Genre(BaseModel):
   id: int
   name: str
+  description: str
   has_subgenre: bool
 
 class Coordinate(BaseModel):

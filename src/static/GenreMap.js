@@ -1,9 +1,11 @@
 let rel_color = "#016FB9"
 
 class Genre {
-  constructor(id, name, x, y, r) {
+  constructor(p, id, name, description, x, y, r) {
+    this.p = p;
     this.id = id;
     this.name = name;
+    this.description = description;
     this.x = x;
     this.y = y;
     this.r = r;
@@ -25,50 +27,58 @@ class Genre {
   }
 
   update(rate) {
-    this.x = lerp(this.x, this.target_x, rate)
-    this.y = lerp(this.y, this.target_y, rate)
+    this.x = this.p.lerp(this.x, this.target_x, rate)
+    this.y = this.p.lerp(this.y, this.target_y, rate)
   }
 
   isHovered(px, py, w, h, pad) {
     const gx = this.x * w + pad;
     const gy = this.y * h + pad;
-    return dist(px, py, gx, gy) <= this.r * 2;
+    return this.p.dist(px, py, gx, gy) <= this.r * 2;
   }
 
-  draw(pad, w, h) {
+  draw(pad, w, h, highlight=false) {
     let x = this.x * w + pad;
     let y = this.y * h + pad;
     let r = this.isExpandable ? 20 : 13;
 
-    let factor = 8- Number(this.depth)
 
-    fill(0)
-    stroke(0)
-    strokeWeight(2);
+    if (highlight) {
+      this.p.fill(255, 0, 0);
+      this.p.noStroke()
+      this.p.circle(x, y, r+10)
+    }
+
+    this.p.fill(0)
+    this.p.stroke(0)
+    this.p.strokeWeight(2);
 
     if (this.selected) {
-      fill("#FF6500");
+      this.p.fill("#FF6500");
     }
     if (this.expanded) {
-      stroke(rel_color);
+      this.p.stroke(rel_color);
+    } else if (!this.isExpandable) {
+      this.p.noStroke();
     }
 
 
 
-    circle(x, y, r);
+    this.p.circle(x, y, r);
 
-    strokeWeight(5);
-    stroke(0)
-    fill(255);
-    textAlign(CENTER, CENTER);
-    textSize(15);
-    text(this.name, x, y - r);
+    this.p.strokeWeight(5);
+    this.p.stroke(0)
+    this.p.fill(255);
+    this.p.textAlign(this.p.CENTER, this.p.CENTER);
+    this.p.textSize(15);
+    this.p.text(this.name, x, y - r);
   }
 }
 
 
 class GenreMap {
-  constructor() {
+  constructor(p) {
+    this.p = p;
     this.session = session;
     this.genres = new Map();
     this.relationships = [];
@@ -76,6 +86,7 @@ class GenreMap {
 
     this.selected = [];
     this.expanded = [];
+    this.highlight = null;
 
     this.drawQueue = [];
 
@@ -92,10 +103,26 @@ class GenreMap {
     }
   }
 
+  update_highlight(id, name, description) {
+    let genre;
+    if (id) {
+      genre = this.genres.get(id);
+    }
+    this.highlight = id;
+    name = id ? genre.name : "default";
+    description = id ? genre.description : "default";
+
+    document.getElementById('genre-name').innerText = name;
+    document.getElementById('genre-description').innerText = description;
+
+  }
+
   update_graph_from_session(data) {
-    console.log(data)
     const { genres: genres, relationships: relationships, layout: layout, state: state } = data;
-    const { selected: selected, expanded: expanded } = state;
+    const { selected: selected, expanded: expanded, highlight: highlight} = state;
+    console.log(highlight)
+
+
 
     genres.forEach(genre => {
       let isSelected = selected.includes(genre.id);
@@ -113,9 +140,9 @@ class GenreMap {
         let x = rel ? layout[rel.source].x : 0.5;
         let y = rel ? layout[rel.source].y : 0.5;
 
-        let g = new Genre(genre.id, genre.name, x, y, 10);
+        let g = new Genre(this.p, genre.id, genre.name, genre.description, x, y, 10);
         g.set_target(pos.x, pos.y);
-        g.isExpandable = genre.has_subgenres;
+        g.isExpandable = genre.has_subgenre;
         g.selected = isSelected;
         g.expanded = isExpanded;
         g.depth = genre.depth;
@@ -133,89 +160,104 @@ class GenreMap {
       }
     }
 
+
+
+    this.update_highlight(highlight);
+
+
+
     this.relationships = relationships;
   }
 
   drawDashedLineFlow(x1, y1, x2, y2, dashLength = 10, gap = 5, speed = 2) {
     let dx = x2 - x1;
     let dy = y2 - y1;
-    let len = dist(x1, y1, x2, y2);
-    let angle = atan2(dy, dx);
+    let len = this.p.dist(x1, y1, x2, y2);
+    let angle = this.p.atan2(dy, dx);
 
-    let offset = frameCount * speed % (dashLength + gap);
+    let offset = this.p.frameCount * speed % (dashLength + gap);
     let current = offset;
 
-    push();
-    translate(x1, y1);
-    rotate(angle);
+    this.p.push();
+    this.p.translate(x1, y1);
+    this.p.rotate(angle);
 
     while (current < len) {
       let start = current;
-      let end = min(current + dashLength, len);
-      line(start, 0, end, 0);
+      let end = this.p.min(current + dashLength, len);
+      this.p.line(start, 0, end, 0);
       current += dashLength + gap;
     }
-    pop();
+    this.p.pop();
   }
 
   draw() {
     let pad = 64;
-    let w = width - 2 * pad;
-    let h = height - 2 * pad;
+    let w = this.p.width - 2 * pad;
+    let h = this.p.height - 2 * pad;
 
     for (const relationship of this.relationships) {
-      strokeWeight(1);
-      stroke(0);
+      this.p.strokeWeight(1);
+      this.p.stroke(0);
       let source = this.genres.get(relationship.source);
       let target = this.genres.get(relationship.target);
       if (source && target) {
-        strokeWeight(2);
+        this.p.strokeWeight(2);
         if (source.selected && target.selected) {
-          strokeWeight(4);
+          this.p.strokeWeight(4);
         }
         switch (relationship.type) {
           case "SUBGENRE_OF":
-            strokeWeight(4);
-            stroke(0, 255, 0);
+            this.p.strokeWeight(4);
+            this.p.stroke(0, 255, 0);
             break;
           case "INFLUENCED_BY":
-            strokeWeight(10);
-            stroke(180);
-            // code for case "b"
+            this.p.strokeWeight(10);
+            this.p.stroke(255, 60);
             break;
           case "FUSION_OF":
-            strokeWeight(3);
-            stroke(0, 0, 255);
-
+            this.p.strokeWeight(3);
+            this.p.stroke(0, 0, 255);
             break;
           default:
-            stroke(0);
+            this.p.stroke(0);
           // code if no case matches
         }
         this.drawDashedLineFlow(source.x * w + pad, source.y * h + pad, target.x * w + pad, target.y * h + pad, 1, 12, 0.5)
       }
     }
 
-    //console.log(this.drawQueue)
-    for (let item of [...this.drawQueue].reverse()) {
 
-      this.genres.get(item).draw(pad, w, h);
+    for (let item of [...this.drawQueue].reverse()) {
+      let highlight = false;
+      if (this.highlight === item) {
+          highlight = true;
+      }
+      this.genres.get(item).draw(pad, w, h, highlight);
     }
   }
 
   mousePressed() {
     let pad = 64;
-    let w = width - 2 * pad;
-    let h = height - 2 * pad;
+    let w = this.p.width - 2 * pad;
+    let h = this.p.height - 2 * pad;
     for (let genre of this.genres.values()) {
-      if (genre.isHovered(mouseX, mouseY, w, h, pad)) {
-        const action = mouseButton === LEFT ? "expand" : "select";
-        this.session.updateOnServer({action: action, id: genre.id }, '/api/graph/update');
+      if (genre.isHovered(this.p.mouseX, this.p.mouseY, w, h, pad)) {
+        let action = null;
+        if (this.p.mouseButton === this.p.LEFT ) {
+          action = genre.isExpandable ? "expand" : "highlight";
+        } else if (this.p.mouseButton === this.p.RIGHT) {
+          action = "select";
+        }
+        if (action) {
+          this.session.updateOnServer({action: action, id: genre.id }, '/api/graph/update');
+        }
       }
     }
   }
   keyPressed() {
     let action = null;
+    let key = this.p.key;
     if (key === 'r' || key === 'R') { // Check if the "X" key is pressed
       action = "reset";
     }
@@ -229,10 +271,10 @@ class GenreMap {
 
   mouseMoved() {
     let pad = 64;
-    let w = width - 2 * pad;
-    let h = height - 2 * pad;
+    let w = this.p.width - 2 * pad;
+    let h = this.p.height - 2 * pad;
     for (let genre of this.genres.values()) {
-      if (genre.isHovered(mouseX, mouseY, w, h, pad)) {
+      if (genre.isHovered(this.p.mouseX, this.p.mouseY, w, h, pad)) {
         let index = this.drawQueue.indexOf(genre.id);
         if (index !== -1) {
           const [elem] = this.drawQueue.splice(index, 1);

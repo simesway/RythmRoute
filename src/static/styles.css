@@ -1,0 +1,40 @@
+body {
+  margin: 0;
+  overflow: hidden;
+  font-family: sans-serif;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;  /* Allow vertical scrolling */
+}
+
+.row {
+  display: flex;
+  flex: 1;  /* Makes each row take up equal height */
+  min-height: 100vh; /* Each row will take at least the full viewport height */
+}
+
+#left-sketch-1, #left-sketch-2, #left-sketch-3 {
+  flex: 2;  /* Left panel takes 2/3 of the width */
+}
+
+.right-panel {
+  flex: 1;  /* Right panel takes 1/3 of the width */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px;
+  box-sizing: border-box;
+  background-color: #f0f0f0;
+}
+
+h1 {
+  margin: 0;
+}
+
+p {
+  flex: 1;
+  margin-bottom: 20px;
+}

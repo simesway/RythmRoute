@@ -50,6 +50,7 @@ class DisplayStrategy(ABC):
       Genre(
         id=genre["id"],
         name=genre["name"],
+        description=genre["description"] or "",
         has_subgenre=genre["has_subgenre"],
       )
       for genre in node_edges.get("nodes", [])
@@ -68,7 +69,8 @@ class DisplayStrategy(ABC):
     }
     state = GenreState(
       selected=session.genres.selected,
-      expanded=session.genres.expanded
+      expanded=session.genres.expanded,
+      highlight=session.genres.highlight
     )
 
     return GenreGraphData(genres=genres, relationships=relations, layout=layout, state=state)
@@ -90,8 +92,8 @@ class DisplayStrategy(ABC):
 
 
 class StartingGenresStrategy(DisplayStrategy):
-  #starting_genres = {1, 3, 5, 20, 99, 114, 151, 379, 523, 6598, 1804}
-  starting_genres = set(GenreGraph.roots)
+  starting_genres = {1, 3, 5, 20, 99, 114, 151, 379, 523, 6598, 1804}
+  #starting_genres = set(GenreGraph.roots)
 
   @classmethod
   def initialize_starting_genres(cls):
@@ -131,6 +133,7 @@ class StartingGenresStrategy(DisplayStrategy):
 
     selected = set(session.genres.selected or [])
     expanded = set(session.genres.expanded or [])
+    highlight = session.genres.highlight
 
     all_nodes = self.starting_genres | selected
 
@@ -138,6 +141,9 @@ class StartingGenresStrategy(DisplayStrategy):
     all_nodes |= self.get_subgenres_between(
       list(all_nodes), list(all_nodes), RelationshipTypeEnum.SUBGENRE_OF.value
     )
+
+    if isinstance(highlight, int):
+      all_nodes |= self.get_subgenres_between(list(self.starting_genres), [highlight])
 
     # Add paths from starting genres to selected genres
     if selected:

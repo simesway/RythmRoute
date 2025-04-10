@@ -8,6 +8,7 @@ from typing import Optional, List
 class GenreData(BaseModel):
   selected: List[int] = []
   expanded: List[int] = []
+  highlight: Optional[int] = None
 
 class SpotifySessionData(BaseModel):
   access_token: str
