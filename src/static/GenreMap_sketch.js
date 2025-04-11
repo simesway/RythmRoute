@@ -1,9 +1,10 @@
 let genreMapSketch = (p) => {
   let genre_map;
   p.setup = () => {
-    p.createCanvas(p.windowWidth * 2 / 3, p.windowHeight);
+    canvas = p.createCanvas(p.windowWidth * 2 / 3, p.windowHeight);
     p.background(60);
     genre_map = new GenreMap(p);
+    canvas.elt.oncontextmenu = () => false;
   };
 
   p.draw = () => {

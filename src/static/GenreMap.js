@@ -40,7 +40,7 @@ class Genre {
   draw(pad, w, h, highlight=false) {
     let x = this.x * w + pad;
     let y = this.y * h + pad;
-    let r = this.isExpandable ? 20 : 13;
+    let r = this.isExpandable ? 24 : 13;
 
 
     if (highlight) {
@@ -109,8 +109,8 @@ class GenreMap {
       genre = this.genres.get(id);
     }
     this.highlight = id;
-    name = id ? genre.name : "default";
-    description = id ? genre.description : "default";
+    name = id ? genre.name : "Choose a Genre";
+    description = id ? genre.description : "click on a genre to see information here.";
 
     document.getElementById('genre-name').innerText = name;
     document.getElementById('genre-description').innerText = description;
@@ -120,9 +120,6 @@ class GenreMap {
   update_graph_from_session(data) {
     const { genres: genres, relationships: relationships, layout: layout, state: state } = data;
     const { selected: selected, expanded: expanded, highlight: highlight} = state;
-    console.log(highlight)
-
-
 
     genres.forEach(genre => {
       let isSelected = selected.includes(genre.id);
@@ -256,7 +253,11 @@ class GenreMap {
     }
   }
   keyPressed() {
+    let pad = 64;
+    let w = this.p.width - 2 * pad;
+    let h = this.p.height - 2 * pad;
     let action = null;
+    let genre_id = -1;
     let key = this.p.key;
     if (key === 'r' || key === 'R') { // Check if the "X" key is pressed
       action = "reset";
@@ -264,8 +265,17 @@ class GenreMap {
     if (key === 'c' || key === 'C') { // Check if the "X" key is pressed
       action = "collapse";
     }
+    if ((key === 'h' || key === 'f')) { // Check if the "X" key is pressed
+      for (let genre of this.genres.values()) {
+        if (genre.isHovered(this.p.mouseX, this.p.mouseY, w, h, pad)){
+          genre_id = genre.id;
+          action = "highlight";
+        }
+      }
+
+    }
     if (action) {
-      this.session.updateOnServer({action: action, id: -1 }, '/api/graph/update')
+      this.session.updateOnServer({action: action, id: genre_id }, '/api/graph/update')
     }
   }
 
