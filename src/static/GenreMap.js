@@ -19,6 +19,7 @@ class Genre {
     this.selected = false;
     this.expanded = false;
     this.isExpandable = false;
+    this.isSelectable = false;
   }
 
   set_target(x, y) {
@@ -43,26 +44,29 @@ class Genre {
     let r = this.isExpandable ? 24 : 13;
 
 
+
     if (highlight) {
       this.p.fill(255, 0, 0);
       this.p.noStroke()
       this.p.circle(x, y, r+10)
     }
 
-    this.p.fill(0)
-    this.p.stroke(0)
-    this.p.strokeWeight(2);
+    this.p.fill(180);
+    this.p.noStroke();
 
-    if (this.selected) {
+    if (this.isSelectable) {
+      this.p.fill(30);
+    } else if (this.selected) {
       this.p.fill("#FF6500");
     }
-    if (this.expanded) {
-      this.p.stroke(rel_color);
-    } else if (!this.isExpandable) {
-      this.p.noStroke();
+
+    if (this.isExpandable) {
+      this.p.strokeWeight(5);
+      this.p.stroke("#FC6FB9");
     }
-
-
+    if (this.expanded) {
+      this.p.stroke("#016FB9");
+    }
 
     this.p.circle(x, y, r);
 
@@ -140,6 +144,7 @@ class GenreMap {
         let g = new Genre(this.p, genre.id, genre.name, genre.description, x, y, 10);
         g.set_target(pos.x, pos.y);
         g.isExpandable = genre.has_subgenre;
+        g.isSelectable = genre.is_selectable;
         g.selected = isSelected;
         g.expanded = isExpanded;
         g.depth = genre.depth;
@@ -244,7 +249,7 @@ class GenreMap {
         if (this.p.mouseButton === this.p.LEFT ) {
           action = genre.isExpandable ? "expand" : "highlight";
         } else if (this.p.mouseButton === this.p.RIGHT) {
-          action = "select";
+          action = genre.isSelectable ? "select" : "highlight";
         }
         if (action) {
           this.session.updateOnServer({action: action, id: genre.id }, '/api/graph/update');

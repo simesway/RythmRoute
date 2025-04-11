@@ -6,7 +6,7 @@ from networkx.readwrite import json_graph
 from typing import List
 
 from src.database.models import RelationshipTypeEnum
-from src.models.SessionResponse import GenreGraphData, Genre, GenreRelationship, Coordinate, GenreState
+from src.models.SessionResponse import GenreGraphData, Genre, GenreRelationship, Coordinate
 from src.models.graph import GenreGraph
 from src.models.SessionData import SessionData
 
@@ -52,6 +52,7 @@ class DisplayStrategy(ABC):
         name=genre["name"],
         description=genre["description"] or "",
         has_subgenre=genre["has_subgenre"],
+        is_selectable=genre["is_spotify_genre"]
       )
       for genre in node_edges.get("nodes", [])
     ]

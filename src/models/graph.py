@@ -32,6 +32,10 @@ class GenreGraph:
           return genre
     return None
 
+  def get_genre(self, id):
+    with self as g:
+      return g.nodes[id]
+
   @staticmethod
   def compute_weight(genre1: Genre, genre2: Genre):
     if genre1.bouncy_value and genre2.bouncy_value:
@@ -62,7 +66,8 @@ class GenreGraph:
           name=genre.name,
           bouncy_value=b,
           organic_value=o,
-          description=genre.description
+          description=genre.description,
+          is_spotify_genre=b is not None and o is not None
         )
 
       for rel in relationships:

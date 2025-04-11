@@ -4,10 +4,7 @@ from src.models.SessionData import GenreData
 from pydantic import BaseModel
 
 
-class GenreState(BaseModel):
-  selected: List[int] = []
-  expanded: List[int] = []
-  highlight: Optional[int] = None
+
 
 class GenreRelationship(BaseModel):
   source: int
@@ -19,6 +16,7 @@ class Genre(BaseModel):
   name: str
   description: str
   has_subgenre: bool
+  is_selectable: bool
 
 class Coordinate(BaseModel):
   x: float
