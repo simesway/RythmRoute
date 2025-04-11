@@ -4,7 +4,7 @@ import json
 from fastapi import Request, Response
 from typing import Optional
 
-from src.config import SESSION_EXPIRE_TIME
+from src.config import SESSION_USER_EXPIRE_TIME
 from src.services.redis_client import redis_client
 from src.models.SessionData import SessionData
 
@@ -13,7 +13,7 @@ def set_session_cookie(session_id: str, response: Response):
   response.set_cookie(
     key="session_id",
     value=session_id,
-    max_age=SESSION_EXPIRE_TIME,
+    max_age=SESSION_USER_EXPIRE_TIME,
     httponly=True,
     secure=True,
     samesite="Lax"
@@ -32,7 +32,7 @@ async def store_session(session_data: SessionData):
   """Stores validated session data in Redis."""
   session_id = session_data.id
   session_dict = session_data.model_dump_json()  # Convert to dictionary
-  await redis_client.setex(session_id, SESSION_EXPIRE_TIME, session_dict)
+  await redis_client.setex(session_id, SESSION_USER_EXPIRE_TIME, session_dict)
 
 async def get_session(request: Request, response: Response) -> SessionData:
   session_id = request.cookies.get("session_id")

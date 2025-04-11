@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, HTTPException, Response, Depends
 import uuid
-from src.config import SESSION_EXPIRE_TIME, SESSION_COOKIE_NAME
+from src.config import SESSION_USER_EXPIRE_TIME, SESSION_COOKIE_NAME
 from src.models.SessionData import SessionData
 from src.services.session_manager import store_session, get_session, delete_session
 
@@ -24,7 +24,7 @@ async def start_session(response: Response):
     key="session_id",
     value=session_id,
     httponly=True,
-    max_age=SESSION_EXPIRE_TIME,
+    max_age=SESSION_USER_EXPIRE_TIME,
     secure=True,  # Use secure cookies (HTTPS only)
     samesite="Lax"  # Helps prevent CSRF attacks
   )
