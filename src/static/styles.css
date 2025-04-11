@@ -1,19 +1,19 @@
 body {
   margin: 0;
-  overflow: hidden;
   font-family: sans-serif;
+  overflow-y: auto;  /* Allow vertical scrolling on the body */
 }
 
 .container {
   display: flex;
   flex-direction: column;
-  overflow-y: auto;  /* Allow vertical scrolling */
+  overflow-y: auto;  /* Allow vertical scrolling for the container */
 }
 
 .row {
   display: flex;
-  flex: 1;  /* Makes each row take up equal height */
-  min-height: 100vh; /* Each row will take at least the full viewport height */
+  flex: 0 0 auto;  /* Prevent the rows from forcing full height, but they will grow as needed */
+  min-height: 0; /* Remove the full viewport height restriction */
 }
 
 #left-sketch-1, #left-sketch-2, #left-sketch-3 {

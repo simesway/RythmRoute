@@ -10,17 +10,17 @@ class ArtistSamplingStrategy(ABC):
     pass
 
 
-class UniformArtistSamplingStrategy(ArtistSamplingStrategy):
+class UniformArtistSampling(ArtistSamplingStrategy):
   @abstractmethod
   def sample_artists(self, session: SessionData):
     pass
 
-class PoissonArtistSamplingStrategy(ArtistSamplingStrategy):
+class PoissonArtistSampling(ArtistSamplingStrategy):
   @abstractmethod
   def sample_artists(self, session: SessionData):
     pass
 
-class StratifiedArtistSamplingStrategy(ArtistSamplingStrategy):
+class StratifiedArtistSampling(ArtistSamplingStrategy):
   @abstractmethod
   def sample_artists(self, session: SessionData):
     pass
