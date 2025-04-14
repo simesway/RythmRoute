@@ -27,12 +27,16 @@ class Artist(BaseModel):
   bouncyness: float
   organicness: float
   popularity: int
-  followers: int
-  genres: List[str]
-  images: List[ImageObject]
+
+class ArtistPool(BaseModel):
+  genre_id: int
+  bouncyness: float
+  organicness: float
+  artists: List[Artist]
 
 class ArtistData(BaseModel):
-  selected: List[str] = []
+  pools: List[ArtistPool] = []
+  selected: List[int] = []
 
 class GenreData(BaseModel):
   selected: List[int] = []
@@ -50,4 +54,5 @@ class SpotifySessionData(BaseModel):
 class SessionData(BaseModel):
   id: str
   genres: GenreData = GenreData()
+  artists: ArtistData = ArtistData()
   spotify: Optional[SpotifySessionData] = None

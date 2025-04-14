@@ -11,6 +11,7 @@ def drop_tables():
     conn.execute(text("DROP TABLE genre_genre CASCADE"))
     conn.execute(text("DROP TABLE artist CASCADE"))
     conn.execute(text("DROP TABLE artist_genre CASCADE"))
+    conn.execute(text("DROP TABLE image_object CASCADE"))
     conn.commit()
 
 def drop_types():

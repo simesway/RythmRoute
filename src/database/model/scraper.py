@@ -80,7 +80,7 @@ def collect_artists_from_genre(genre: Genre):
 
       db_artist = find_matching_artist(session, artist["name"])
       if not db_artist:
-        db_artist = Artist(name=artist["name"], spotify_id=artist["spotify_id"])
+        db_artist = Artist(name=artist["name"], spotify_id=artist["spotify_id"], spotify_genres=[])
         session.add(db_artist)
         session.flush()
         artist_id = db_artist.id
@@ -99,9 +99,10 @@ def collect_artists_from_genre(genre: Genre):
     session.commit()
 
 
-def collect_every_noise(genre_limit: int=None):
-  print("collecting EVERY NOISE")
-  collect_genres_every_noise()
+def collect_every_noise(genre_map:bool=True, genre_limit: int=None):
+  if genre_map:
+    print("collecting EVERY NOISE")
+    collect_genres_every_noise()
 
   with SessionLocal() as session:
     stmt = select(Genre).where(Genre.bouncy_value.isnot(None))
@@ -110,8 +111,15 @@ def collect_every_noise(genre_limit: int=None):
     genres = session.execute(stmt).scalars().all()
 
   print("collecting genres:")
+  max_iters = 10
   for genre in tqdm(genres):
-    collect_artists_from_genre(genre)
+    for i in range(max_iters):
+      try:
+        collect_artists_from_genre(genre)
+      except Exception as e:
+        print(e)
+        continue
+      break
 
 
 def collect_musicbrainz():
@@ -123,5 +131,12 @@ def collect_musicbrainz():
     genres = session.execute(stmt).scalars().all()
 
   print("collecting genres:")
+  max_iters = 10
   for genre in tqdm(genres):
-    collect_genre_relationships_from_mb(genre)
+    for i in range(max_iters):
+      try:
+        collect_genre_relationships_from_mb(genre)
+      except Exception as e:
+        print(e)
+        continue
+      break
