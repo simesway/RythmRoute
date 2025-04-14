@@ -1,76 +1,132 @@
-from typing import List
+from typing import List, Dict, Optional
 from spotipy import Spotify
+import json
 
-from sqlalchemy import select
 from sqlalchemy.orm import joinedload
+from datetime import datetime, timedelta
 
-import src.database.models as db
+from random import random
+from src.config import DB_SCRAPE_TIME_DELTA_DAYS, CACHE_OBJECT_TTL
 from src.database.db import SessionLocal
-from src.models.SessionData import Artist, SessionData, SpotifySessionData, ImageObject
-from src.routes.spotify import get_spotify_session
+from src.database.models import Genre, ArtistInGenre
+from src.models.SessionData import Artist, ArtistPool
+from src.services.redis_client import redis_sync
 
 
 class ArtistHandler:
-  def __init__(self, db_session: SessionLocal, sp_session: Spotify):
-    self.db_session = db_session
+  # organic value
+  o_min = 44
+  o_max = 22648
+  # bouncy value
+  b_min = 10
+  b_max = 1500
+
+  def __init__(self, sp_session: Spotify=None):
     self.spotify = sp_session
 
-  def get_artist(self, artist: db.Artist) -> Artist:
-    pass
+  @staticmethod
+  def load_pool_to_redis(pool: ArtistPool):
+    redis_sync.setex(f"pool:genre:{int(pool.genre_id)}", CACHE_OBJECT_TTL, pool.model_dump_json())
 
-  def get_genre_artists(self, genre_id: int) -> dict:
-    stmt = (
-      select(db.Genre)
-      .where(db.Genre.id == genre_id)
-      .options(joinedload(db.Genre.artists).joinedload(db.ArtistInGenre.artist))
-    )
-    genre = self.db_session.execute(stmt).unique().scalar_one()
-    return {
-      rel.artist.spotify_id:
-        {"artist": rel.artist,
-         "bouncy_value": rel.bouncy_value,
-         "organic_value": rel.organic_value}
-      for rel in genre.artists
-    }
+  def load_pool_from_redis(self, genre_id) -> Optional[ArtistPool]:
+    pool_data = redis_sync.get(f"pool:genre:{int(genre_id)}")
+    return ArtistPool(**json.loads(pool_data)) if pool_data else None
 
-  def get_spotify_artists(self, artist_ids: List[str]) -> List[dict]:
+  def get_pool(self, genre_id: int) -> ArtistPool:
+    with SessionLocal() as session:
+      genre = session.query(Genre).get(genre_id)
+      pool = self.load_pool_from_redis(genre_id)
+      if not pool:
+        artists = self.get_and_update_artists(genre_id)
+        pool = ArtistPool(
+          genre_id=genre_id,
+          artists=artists,
+          bouncyness=(genre.bouncy_value - self.b_min) / (self.b_max - self.b_min) ,
+          organicness=(genre.organic_value - self.o_min) / (self.o_max - self.o_min),
+        )
+        self.load_pool_to_redis(pool)
+        print("created Pool")
+      return pool
+
+
+  def fetch_artists(self, spotify_ids: List[str]) -> Dict[str, dict]:
     all_artists = []
-    for i in range(0, len(artist_ids), 50):
-      batch = artist_ids[i:i + 50]
+    for i in range(0, len(spotify_ids), 50):
+      batch = spotify_ids[i:i + 50]
       sp_artists = self.spotify.artists(batch)['artists']
       all_artists.extend(sp_artists)
-    return all_artists
+    return {
+      a["id"]: {
+        "popularity": a.get("popularity", 0),
+        "followers": a["followers"].get("total", 0),
+        "spotify_genres": a.get("genres", [])
+      }
+      for a in all_artists
+    }
 
-  def get_artists(self, genre_id: int) -> List[Artist]:
-    db_artists = self.get_genre_artists(genre_id)
-    artist_ids = list(db_artists.keys())
-    sp_artists = {a["id"]: a for a in self.get_spotify_artists(artist_ids)}
+  def get_and_update_artists(self, genre_id: int) -> List[Artist]:
+    cutoff = datetime.now() - timedelta(days=int(DB_SCRAPE_TIME_DELTA_DAYS))
+    with SessionLocal() as session:
+      genre = (
+        session.query(Genre)
+        .options(joinedload(Genre.artists).joinedload(ArtistInGenre.artist))
+        .filter_by(id=genre_id)
+        .first()
+      )
 
+      artists_to_update = [
+        link.artist.spotify_id for link in genre.artists
+        if not link.artist.popularity or link.artist.modified_at < cutoff
+      ]
 
-    artists = []
-    for spotify_id in db_artists.keys():
-      db_artist = db_artists.get(spotify_id)
-      sp_artist = sp_artists.get(spotify_id)
+      spotify_data = self.fetch_artists(artists_to_update)
 
-      if sp_artist and db_artist:
-        images = [
-          ImageObject(
-            url=image["url"],
-            width=image["width"],
-            height=image["height"]
-          ) for image in sp_artist['images']
-        ]
-        artist = Artist(
-          id=db_artist["artist"].id,
-          spotify_id=spotify_id,
-          name=sp_artist["name"],
-          bouncyness=db_artist.get("bouncy_value", 0),
-          organicness=db_artist.get("organic_value", 0),
-          popularity=sp_artist.get("popularity", 0),
-          followers=sp_artist["followers"].get("total", 0),
-          genres=sp_artist.get("genres", []),
-          images=images
-        )
-        artists.append(artist)
+      for link in genre.artists:
+        artist = link.artist
+        data = spotify_data.get(artist.spotify_id)
+        if data:
+          artist.popularity = data["popularity"]
+          artist.followers = data["followers"]
+          artist.spotify_genres = data["spotify_genres"]
+          artist.modified_at = datetime.now()
+
+      session.commit()
+
+      artists = [
+        Artist(
+          id=l.artist.id,
+          spotify_id=l.artist.spotify_id,
+          name=l.artist.name,
+          bouncyness=l.bouncy_value,
+          organicness=l.organic_value,
+          popularity=l.artist.popularity
+        ) for l in genre.artists
+      ]
+    return self.normalize_coordinates(artists)
+
+  @staticmethod
+  def normalize_coordinates(artists: List[Artist]) -> List[Artist]:
+    bouncy_vals = [artist.bouncyness for artist in artists if artist.bouncyness]
+    organic_vals = [artist.organicness for artist in artists if artist.organicness]
+    b_min, b_max = min(bouncy_vals), max(bouncy_vals)
+    o_min, o_max = min(organic_vals), max(organic_vals)
+
+    for a in artists:
+
+      a.bouncyness = (a.bouncyness - b_min) / (b_max - b_min) if a.bouncyness else random()
+      a.organicness = (a.organicness - o_min) / (o_max - o_min) if a.organicness else random()
 
     return artists
+
+  @classmethod
+  def initialize(cls):
+    with SessionLocal() as session:
+      genres = session.query(Genre).filter(Genre.bouncy_value.isnot(None)).all()
+
+      bouncy_vals = [genre.bouncy_value for genre in genres if genre.bouncy_value]
+      organic_vals = [genre.organic_value for genre in genres if genre.organic_value]
+      cls.b_min, cls.b_max = min(bouncy_vals), max(bouncy_vals)
+      cls.o_min, cls.o_max = min(organic_vals), max(organic_vals)
+
+
+ArtistHandler.initialize()

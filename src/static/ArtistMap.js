@@ -57,10 +57,15 @@ class ArtistMap {
     this.p = p;
     this.session = session;
     this.artists = new Map();
+    this.pools = []
 
     this.selected = [];
     this.expanded = [];
     this.highlight = null;
+    this.bounds =       {
+        bouncyness: { min: Infinity, max: -Infinity },
+        organicness: { min: Infinity, max: -Infinity }
+      }
 
     this.drawQueue = [];
 
@@ -88,7 +93,7 @@ class ArtistMap {
 
   }
 
-  update_graph_from_session(data) {
+  update_graph_from_session_old(data) {
     console.log(data)
     const { artists: artists, layout: layout, state: state } = data;
     const { selected: selected} = state;
@@ -131,6 +136,35 @@ class ArtistMap {
 
   }
 
+  update_graph_from_session(data) {
+    const { pools: pools, selected: selected } = data;
+
+    if (!pools || pools.length === 0) {
+      return;
+    }
+
+    this.pools = pools;
+
+
+    this.bounds = pools.reduce(
+      (acc, p) => {
+        const b = p.bouncyness ?? 0;
+        const o = p.organicness ?? 0;
+        console.log(o, b)
+
+        acc.bouncyness.min = Math.min(acc.bouncyness.min, b);
+        acc.bouncyness.max = Math.max(acc.bouncyness.max, b);
+        acc.organicness.min = Math.min(acc.organicness.min, o);
+        acc.organicness.max = Math.max(acc.organicness.max, o);
+        return acc;
+      },
+      {
+        bouncyness: { min: Infinity, max: -Infinity },
+        organicness: { min: Infinity, max: -Infinity }
+      }
+    );
+  }
+
   draw_legend() {
     let w = this.p.width;
     let h = this.p.height;
@@ -145,7 +179,53 @@ class ArtistMap {
     this.p.text("bouncy", w-pad, h/2);
   }
 
+  normalize(value, min, max) {
+    if (max === min) return 0; // or 1, depending on your use case
+    return (value - min) / (max - min);
+  }
+
   draw() {
+    this.draw_legend()
+    if (!this.pools || this.pools.length === 0) {
+      return;
+    }
+    let pad = 64;
+    let w = this.p.width - 2 * pad;
+    let h = this.p.height - 2 * pad;
+
+    let b_min = this.bounds["bouncyness"]["min"];
+    let b_max = this.bounds["bouncyness"]["max"];
+    let o_min = this.bounds["organicness"]["min"];
+    let o_max = this.bounds["organicness"]["max"];
+
+    let alpha = 0.5;
+    let beta = 0.5;
+    for (let pool of this.pools) {
+      let genre_x = 0.5;
+      let genre_y = 0.5;
+      if (this.pools.length > 1) {
+        genre_x = this.normalize(pool.bouncyness, b_min, b_max);
+        genre_y = this.normalize(pool.organicness, o_min, o_max);
+      }
+      console.log(genre_x, genre_y)
+      for (let artist of pool.artists) {
+        let x = genre_x * alpha * w + beta * (artist["bouncyness"] - 0.5) * w;
+        let y = genre_y * alpha * h + beta * (artist["organicness"] - 0.5) * h;
+        this.draw_artist(x, y, artist["name"]);
+      }
+    }
+  }
+
+  draw_artist(x, y, name) {
+    this.p.strokeWeight(5);
+    this.p.stroke(0)
+    this.p.fill(255);
+    this.p.textAlign(this.p.CENTER, this.p.CENTER);
+    this.p.textSize(10);
+    this.p.text(name, x, y);
+  }
+
+  draw_old() {
     this.draw_legend()
     let pad = 64;
     let w = this.p.width - 2 * pad;

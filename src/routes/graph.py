@@ -33,8 +33,8 @@ async def update_graph(request: GraphUpdate, session: SessionData = Depends(get_
 
   elif action == "select":
     s = session.genres.selected
-    session.genres.highlight = request.id
     s.append(request.id) if not request.id in s else s.remove(request.id)
+    session.genres.highlight = request.id
 
   elif action == "reset":
     session.genres.expanded = []

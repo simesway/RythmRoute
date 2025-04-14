@@ -1,6 +1,6 @@
 from typing import Optional, Dict, List
 
-from src.models.SessionData import GenreData, Artist, ArtistData
+from src.models.SessionData import GenreData, Artist, ArtistData, ArtistPool
 from pydantic import BaseModel
 
 
@@ -23,8 +23,7 @@ class Coordinate(BaseModel):
   y: float
 
 class ArtistMapData(BaseModel):
-  artists: List[Artist] = []
-  layout: Dict[str, Coordinate]
+  pools: List[ArtistPool] = []
   state: ArtistData = ArtistData()
 
 class GenreGraphData(BaseModel):
@@ -34,5 +33,5 @@ class GenreGraphData(BaseModel):
   state: GenreData = GenreData()
 
 class SessionResponse(BaseModel):
-  graph: Optional[GenreGraphData]
-  artists: Optional[ArtistMapData]
+  graph: Optional[GenreGraphData] = None
+  artists: Optional[ArtistData] = None
