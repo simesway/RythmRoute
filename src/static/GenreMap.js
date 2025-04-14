@@ -56,7 +56,8 @@ class Genre {
 
     if (this.isSelectable) {
       this.p.fill(30);
-    } else if (this.selected) {
+    }
+    if (this.selected) {
       this.p.fill("#FF6500");
     }
 

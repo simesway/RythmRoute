@@ -30,6 +30,7 @@ class Artist(BaseModel):
 
 class ArtistPool(BaseModel):
   genre_id: int
+  name: str
   bouncyness: float
   organicness: float
   artists: List[Artist]

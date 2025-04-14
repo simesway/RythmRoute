@@ -41,6 +41,7 @@ class ArtistHandler:
         pool = ArtistPool(
           genre_id=genre_id,
           artists=artists,
+          name=genre.name,
           bouncyness=(genre.bouncy_value - self.b_min) / (self.b_max - self.b_min) ,
           organicness=(genre.organic_value - self.o_min) / (self.o_max - self.o_min),
         )
