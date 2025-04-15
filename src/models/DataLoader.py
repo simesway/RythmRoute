@@ -100,7 +100,7 @@ class ArtistHandler:
           name=l.artist.name,
           bouncyness=l.bouncy_value,
           organicness=l.organic_value,
-          popularity=l.artist.popularity
+          popularity=l.artist.popularity or 0
         ) for l in genre.artists
       ]
     return self.normalize_coordinates(artists)
