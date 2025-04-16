@@ -3,7 +3,7 @@ from networkx.drawing.nx_agraph import graphviz_layout
 
 import networkx as nx
 from networkx.readwrite import json_graph
-from typing import List
+from typing import List, Tuple
 
 from src.database.models import RelationshipTypeEnum
 from src.models.SessionResponse import GenreGraphData, Genre, GenreRelationship, Coordinate
@@ -41,7 +41,7 @@ class DisplayStrategy(ABC):
     data = self.generate_data()
     return {"graph": node_edges, "layout": layout, "data": data}
 
-  def to_GenreGraphData(self, session: SessionData) -> GenreGraphData:
+  def to_GenreGraphData(self, session: SessionData) -> Tuple[List[Genre], List[GenreRelationship], dict]:
     subgraph = self.generate_subgraph(session)
     node_edges = json_graph.node_link_data(subgraph)
     layout = self.get_json_layout(subgraph)
@@ -50,9 +50,10 @@ class DisplayStrategy(ABC):
       Genre(
         id=genre["id"],
         name=genre["name"],
-        description=genre["description"] or "",
         has_subgenre=genre["has_subgenre"],
-        is_selectable=genre["is_spotify_genre"]
+        is_selectable=genre["is_spotify_genre"],
+        bouncyness=genre["bouncy_value"],
+        organicness=genre["organic_value"],
       )
       for genre in node_edges.get("nodes", [])
     ]
@@ -69,7 +70,7 @@ class DisplayStrategy(ABC):
       for genre_id, pos in layout.items()
     }
 
-    return GenreGraphData(genres=genres, relationships=relations, layout=layout)
+    return genres, relations, layout
 
   @staticmethod
   def normalize_layout(layout: dict) -> dict:

@@ -1,5 +1,6 @@
 class SessionModel {
   constructor(data) {
+    this.genre_data = data.genre_data ?? null;
     this.graph = data.graph ?? null;
     this.artists = data.artists ?? null;
   }

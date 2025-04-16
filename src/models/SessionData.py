@@ -39,7 +39,7 @@ class ArtistData(BaseModel):
   pools: List[ArtistPool] = []
   selected: List[int] = []
 
-class GenreData(BaseModel):
+class GenreSelectionData(BaseModel):
   selected: List[int] = []
   expanded: List[int] = []
   highlight: Optional[int] = None
@@ -54,6 +54,6 @@ class SpotifySessionData(BaseModel):
 
 class SessionData(BaseModel):
   id: str
-  genres: GenreData = GenreData()
+  genres: GenreSelectionData = GenreSelectionData()
   artists: ArtistData = ArtistData()
   spotify: Optional[SpotifySessionData] = None
