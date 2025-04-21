@@ -72,3 +72,17 @@ class AttributeWeightedSampling(SamplingStrategy):
     values = [getattr(item, self.attr) for item in items]
     weights = values if self.higher_is_better else [1 / (v + 1e-6) for v in values]
     return random.choices(items, weights=weights, k=1)[0]
+
+class WeightedCombinedSampler(SamplingStrategy):
+  samplers: List[SamplingStrategy]
+  weights: Optional[List[float]] = None
+  n_samples: int = 1
+
+  def apply(self, items: List[Any], seed: Optional[int] = None) -> Any:
+    if seed is not None:
+      random.seed(seed)
+    result = []
+    for i in range(self.n_samples):
+      sampler: SamplingStrategy = random.choices(self.samplers, weights=self.weights, k=1)[0]
+      result.append(sampler.apply(items, seed))
+    return result
