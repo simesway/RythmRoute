@@ -1,7 +1,9 @@
+from dataclasses import field
+
 from datetime import datetime
 
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 
 class ImageObject(BaseModel):
@@ -37,7 +39,7 @@ class ArtistPool(BaseModel):
 
 class ArtistData(BaseModel):
   pools: List[ArtistPool] = []
-  selected: List[int] = []
+  sampled: Dict[int, list] = field(default_factory=dict)
 
 class GenreSelectionData(BaseModel):
   selected: List[int] = []

@@ -1,7 +1,5 @@
 from spotipy import Spotify
 
-from src.database.db import SessionLocal
-from src.models.ArtistDisplayStrategy import AllPoolsDisplayStrategy
 from src.models.DataLoader import ArtistHandler
 from src.models.GenreDisplayStrategy import StartingGenresStrategy
 from src.models.SessionResponse import SessionResponse, ArtistMapData, GenreGraphData, GenreData
@@ -18,15 +16,18 @@ async def create_SessionResponse(session: SessionData) -> SessionResponse:
   genre_graph_data = GenreGraphData(relationships=relations, layout=layout)
   genre_data = GenreData(genres=genres, state=session.genres)
 
-  sp_session = await get_spotify_session(session)
-  spotify = Spotify(auth=sp_session.access_token)
+  artist_map = True
+  artist_data = None
+  if artist_map:
+    sp_session = await get_spotify_session(session)
+    spotify = Spotify(auth=sp_session.access_token)
 
 
-  pools = []
-  for genre_id in session.genres.selected:
-    pool = ArtistHandler(sp_session=spotify).get_pool(genre_id)
-    pools.append(pool)
-  artist_data = ArtistData(pools=pools)
+    pools = []
+    for genre_id in session.genres.selected:
+      pool = ArtistHandler(sp_session=spotify).get_pool(genre_id)
+      pools.append(pool)
+    artist_data = ArtistMapData(pools=pools, sampled=session.artists.sampled or {})
 
   #artists = DefaultDisplayStrategy().generate(genre_artists) if genre_artists else None
 

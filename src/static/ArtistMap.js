@@ -1,7 +1,3 @@
-let rel_color = "#016FB9"
-
-
-
 class Artist {
   constructor(data) {
     this.id = data.id;
@@ -23,23 +19,25 @@ class Artist {
   }
 
   draw(p, x, y, inner_fill, outer_fill) {
-    p.strokeWeight(3);
+    let text_size = 12 + this.popularity/5;
+    p.strokeWeight(text_size / 4);
     p.stroke(outer_fill);
     p.fill(inner_fill);
     p.textAlign(p.CENTER, p.CENTER);
-    p.textSize(12 + this.popularity/5);
+    p.textSize(text_size);
     p.text(this.name, x, y);
   }
 }
 
 
 class ArtistPool  {
-  constructor(pool_data) {
+  constructor(pool_data, sampled) {
     this.genre_id = pool_data.genre_id;
     this.name = pool_data.name;
     this.bouncyness = pool_data.bouncyness;
     this.organicness = pool_data.organicness;
     this.artists = [];
+    this.sampled = sampled ?? [];
 
     for (let artist_data of pool_data.artists) {
       this.artists.push(new Artist(artist_data));
@@ -63,6 +61,7 @@ class ArtistMap {
     console.log("ArtistMap init")
     this.p = p;
     this.session = session;
+    this.genres = genre_manager;
 
     this.pools = []
     this.b_min = 0;
@@ -86,7 +85,7 @@ class ArtistMap {
   }
 
   update_graph_from_session(data) {
-    const { pools: pools, selected: selected } = data;
+    const { pools: pools, sampled: sampled_dict } = data;
 
     if (!pools || pools.length === 0) {
       return;
@@ -95,7 +94,9 @@ class ArtistMap {
     this.pools = [];
 
     for (let pool of pools) {
-      this.pools.push(new ArtistPool(pool));
+      let sampled = sampled_dict[pool.genre_id]
+      console.log(sampled)
+      this.pools.push(new ArtistPool(pool, sampled));
     }
 
     let b_values = this.pools.map(pool => pool.bouncyness);
@@ -175,7 +176,13 @@ class ArtistMap {
       let bouncy_color = this.p.lerpColor(this.atmospheric_color, this.bouncy_color, pool.bouncyness);
       let organic_color = this.p.lerpColor(this.electric_color, this.organic_color, pool.organicness);
       for (let artist of pool.artists) {
-
+        if (pool.sampled.includes(Number(artist.id))) {
+          bouncy_color = this.p.color(255, 0, 0);
+          organic_color = this.p.color(255);
+        } else {
+          bouncy_color = this.p.lerpColor(this.atmospheric_color, this.bouncy_color, pool.bouncyness);
+          organic_color = this.p.lerpColor(this.electric_color, this.organic_color, pool.organicness);
+        }
         let adj_bouncyness = pool.bouncyness + alpha * (artist.bouncyness - 0.5);
         let adj_organicness = pool.organicness + alpha * (artist.organicness - 0.5);
         let artist_x = this.scale(adj_bouncyness, b_min, b_max, 0, w) + pad;

@@ -12,8 +12,12 @@ class Genre {
 
 class GenreManager {
   constructor() {
-    //this.container = document.getElementById();
+    this.container = document.getElementById('card-container');
     this.genres = new Map(); // id → Genre
+    this.selected = [];
+    this.expanded = [];
+
+    this.genre_cards = new Map();
 
     this.session = session;
     this.session.subscribe((state) => {
@@ -27,11 +31,11 @@ class GenreManager {
   }
 
   isSelected(genre_id) {
-    return this.selected.includes(String(genre_id));
+    return this.selected.includes(Number(genre_id));
   }
 
   isExpanded(genre_id) {
-    return this.expanded.includes(String(genre_id));
+    return this.expanded.includes(Number(genre_id));
   }
 
   get(genre_id) {
@@ -39,52 +43,58 @@ class GenreManager {
   }
 
   update_genres(data) {
-  const { genres: new_genres, state } = data;
-  const { selected, expanded, highlight } = state;
+    const { genres: new_genres, state } = data;
+    const { selected, expanded, highlight } = state;
 
-  this.selected = selected;
-  this.expanded = expanded;
-  this.highlight = highlight;
+    this.selected = selected;
+    this.expanded = expanded;
+    this.highlight = highlight;
 
-  const new_ids = new Set(new_genres.map(g => String(g.id)));
+    const new_ids = new Set(new_genres.map(g => String(g.id)));
 
-  new_genres.forEach(genre => {
-    const id = String(genre.id);
-    if (!this.genres.has(id)) {
-      this.genres.set(id, new Genre(genre));
+    new_genres.forEach(genre => {
+      const id = String(genre.id);
+      if (!this.genres.has(id)) {
+        this.genres.set(id, new Genre(genre));
+      }
+    });
+
+    for (const id of this.genres.keys()) {
+      if (!new_ids.has(id)) {
+        this.genres.delete(id);
+      }
     }
-  });
 
-  for (const id of this.genres.keys()) {
-    if (!new_ids.has(id)) {
-      this.removeGenre(id);
+    for (const id of this.selected) {
+      let card = this.genre_cards.get(String(id));
+      if (card) {
+      } else {
+        let genre = this.get(id);
+        this.genre_cards.set(String(id), new GenreCard(this.session, genre, "card-container"));
+      }
     }
   }
-}
 
-  addGenre(genre) {
-    if (this.genres.has(genre.id)) return;
-    this.genres.set(genre.id, genre);
-    this._renderCard(genre);
+  toggleExpandGenre(id) {
+    if (!this.has(id)) return;
+    let genre = this.get(id);
+    let action= genre.hasSubgenre ? "expand" : "highlight";
+    this.session.updateOnServer({action: action, id: genre.id }, '/api/graph/update');
   }
 
-  removeGenre(id) {
-    id = String(id);
-    this.genres.delete(id);
-    const card = document.getElementById(id);
-    if (card) card.remove();
+  toggleSelectGenre(id) {
+    if (!this.has(id)) return;
+    let genre = this.get(id);
+    let action = genre.isSelectable ? "select" : "highlight";
+    this.session.updateOnServer({action: action, id: genre.id }, '/api/graph/update');
+
+    const card = this.genre_cards.get(String(id));
+    if (card) {
+      card.destroy();
+      this.genre_cards.delete(id);
+    }
   }
 
-  _renderCard(genre) {
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.id = genre.id;
-    card.innerHTML = `
-      <h3>${genre.name}</h3>
-      <button onclick="genreManager.removeGenre('${genre.id}')">Remove</button>
-    `;
-    this.container.appendChild(card);
-  }
 }
 
 

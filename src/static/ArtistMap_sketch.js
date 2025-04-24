@@ -10,7 +10,7 @@ let artistMapSketch = (p) => {
   };
 
   p.draw = () => {
-    p.background(100);
+    p.background(120);
 
     artist_map.draw();
     p.strokeWeight(2);

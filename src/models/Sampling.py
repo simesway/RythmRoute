@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
 from typing import List, Literal, Optional, Any
+import math
+import numpy as np
 
 import random
 
@@ -65,13 +67,30 @@ class WeightedSampling(SamplingStrategy):
 class AttributeWeightedSampling(SamplingStrategy):
   attr: str
   higher_is_better: bool
+  alpha: float = 1.0
+
+  def log_weights(self, items):
+    values = [math.log(getattr(item, self.attr) + 1e-6) for item in items]
+    return values if self.higher_is_better else [1 / (v + 1e-6) for v in values]
+
+  def soft_max(self, items):
+    vals = np.array([getattr(item, self.attr) for item in items])
+    vals = vals if self.higher_is_better else -vals
+    exp_vals = np.exp(vals - np.max(vals))  # for numerical stability
+    return exp_vals / np.sum(exp_vals)
+
+  def rank_based(self, items, exponent):
+    sorted_items = sorted(items, key=lambda x: getattr(x, self.attr), reverse=not self.higher_is_better)
+    weights = [(i + 1) ** self.alpha for i in range(len(sorted_items))]
+    return random.choices(sorted_items, weights=weights, k=1)[0]
 
   def apply(self, items: List[Any], seed: Optional[int] = None) -> Any:
     if seed is not None:
       random.seed(seed)
     values = [getattr(item, self.attr) for item in items]
-    weights = values if self.higher_is_better else [1 / (v + 1e-6) for v in values]
-    return random.choices(items, weights=weights, k=1)[0]
+    weights = self.soft_max(items)
+    #return random.choices(items, weights=weights, k=1)[0]
+    return self.rank_based(items, 4)
 
 class WeightedCombinedSampler(SamplingStrategy):
   samplers: List[SamplingStrategy]

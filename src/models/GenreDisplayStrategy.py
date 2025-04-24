@@ -89,8 +89,8 @@ class DisplayStrategy(ABC):
 
 
 class StartingGenresStrategy(DisplayStrategy):
-  starting_genres = {1, 3, 5, 20, 99, 114, 151, 379, 523, 6598, 1804}
-  #starting_genres = set(GenreGraph.roots)
+  #starting_genres = {1, 3, 5, 20, 99, 114, 151, 379, 523, 6598, 1804}
+  starting_genres = set(GenreGraph.roots)
 
   @classmethod
   def initialize_starting_genres(cls):

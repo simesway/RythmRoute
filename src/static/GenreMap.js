@@ -120,18 +120,18 @@ class GenreMap {
     this.p.noStroke();
 
     if (genre.isSelectable) {
-      this.p.fill(30);
-    }
-    if (this.genre_manager.isSelected(genre_id)) {
-      this.p.fill("#FF6500");
+      this.p.fill(70);
+      if (this.genre_manager.isSelected(genre_id)) {
+        this.p.fill("#FF6500");
+      }
     }
 
     if (genre.hasSubgenre) {
       this.p.strokeWeight(5);
-      this.p.stroke("#FC6FB9");
-    }
-    if (this.genre_manager.isExpanded(genre_id)) {
-      this.p.stroke("#016FB9");
+      this.p.stroke("#112233");
+      if (this.genre_manager.isExpanded(genre_id)) {
+        this.p.stroke("#016FB9");
+      }
     }
 
     this.p.circle(x, y, r);
@@ -186,31 +186,21 @@ class GenreMap {
   }
 
   mousePressed() {
-    let pad = 64;
-    let w = this.p.width - 2 * pad;
-    let h = this.p.height - 2 * pad;
     for (let [genre_id, pos] of this.layout) {
-      let genre = this.genre_manager.get(genre_id);
       const { x: x, y: y } = this.get_coords(pos.x, pos.y);
       let d = this.p.dist(this.p.mouseX, this.p.mouseY, x, y);
       let r = 20;
       if (d <= r) {
-        let action = null;
         if (this.p.mouseButton === this.p.LEFT ) {
-          action = genre.hasSubgenre ? "expand" : "highlight";
+          this.genre_manager.toggleExpandGenre(genre_id);
         } else if (this.p.mouseButton === this.p.RIGHT) {
-          action = genre.isSelectable ? "select" : "highlight";
-        }
-        if (action) {
-          this.session.updateOnServer({action: action, id: genre.id }, '/api/graph/update');
+          this.genre_manager.toggleSelectGenre(genre_id);
         }
       }
     }
   }
+
   keyPressed() {
-    let pad = 64;
-    let w = this.p.width - 2 * pad;
-    let h = this.p.height - 2 * pad;
     let action = null;
     let genre_id = -1;
     let key = this.p.key;

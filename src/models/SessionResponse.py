@@ -1,3 +1,5 @@
+from dataclasses import field
+
 from typing import Optional, Dict, List
 
 from src.models.SessionData import GenreSelectionData, Artist, ArtistData, ArtistPool
@@ -29,7 +31,7 @@ class Coordinate(BaseModel):
 
 class ArtistMapData(BaseModel):
   pools: List[ArtistPool] = []
-  state: ArtistData = ArtistData()
+  sampled: Dict[int, list] = field(default_factory=dict)
 
 class GenreGraphData(BaseModel):
   relationships: List[GenreRelationship]
@@ -38,4 +40,4 @@ class GenreGraphData(BaseModel):
 class SessionResponse(BaseModel):
   genre_data: GenreData = GenreData()
   graph: Optional[GenreGraphData] = None
-  artists: Optional[ArtistData] = None
+  artists: Optional[ArtistMapData] = None
