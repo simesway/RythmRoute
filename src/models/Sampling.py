@@ -80,15 +80,21 @@ class AttributeWeightedSampling(SamplingStrategy):
     return exp_vals / np.sum(exp_vals)
 
   def rank_based(self, items, exponent):
-    sorted_items = sorted(items, key=lambda x: getattr(x, self.attr), reverse=not self.higher_is_better)
-    weights = [(i + 1) ** self.alpha for i in range(len(sorted_items))]
+    attr_values = np.array([getattr(item, self.attr) for item in items])
+    sorted_indices = np.argsort(attr_values)
+
+    if not self.higher_is_better:
+      sorted_indices = sorted_indices[::-1]  # Reverse if needed
+
+    sorted_items = [items[i] for i in sorted_indices]
+    weights = (np.arange(1, len(sorted_items) + 1) ** self.alpha).tolist()
     return random.choices(sorted_items, weights=weights, k=1)[0]
 
   def apply(self, items: List[Any], seed: Optional[int] = None) -> Any:
     if seed is not None:
       random.seed(seed)
-    values = [getattr(item, self.attr) for item in items]
-    weights = self.soft_max(items)
+    #values = [getattr(item, self.attr) for item in items]
+    #weights = self.soft_max(items)
     #return random.choices(items, weights=weights, k=1)[0]
     return self.rank_based(items, 4)
 
