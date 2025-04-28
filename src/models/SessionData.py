@@ -3,23 +3,8 @@ from dataclasses import field
 from datetime import datetime
 
 from pydantic import BaseModel
+from spotipy import Spotify
 from typing import Optional, List, Dict
-
-
-class ImageObject(BaseModel):
-  url: str
-  height: int
-  width: int
-
-
-class Album(BaseModel):
-  spotify_id: str
-  name: str
-  album_type: str
-  total_tracks: int
-  release_date: datetime
-  images: List[ImageObject]
-  artists: List[str] = []
 
 
 class Artist(BaseModel):
@@ -53,6 +38,10 @@ class SpotifySessionData(BaseModel):
   refresh_token: str
   scope: str
   expires_at: datetime
+
+  def __call__(self):
+    return Spotify(auth=self.access_token)
+
 
 class SessionData(BaseModel):
   id: str
