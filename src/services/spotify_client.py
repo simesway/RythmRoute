@@ -15,7 +15,7 @@ class SpotifyClient:
 
 
 
-class SpotifyUserClient:
+class SpotifyUserRedisClient:
   def __init__(self):
     self.redis = redis_sync
     self.sp_oauth = SpotifyOAuth(
@@ -26,8 +26,13 @@ class SpotifyUserClient:
       cache_handler=None
     )
 
+  @staticmethod
+  def _get_key(user_id: str):
+    return f'spotify_user_token:{user_id}'
+
   def _get_token(self, user_id):
-    token_info = self.redis.hgetall(f'spotify_user_token:{user_id}')
+    token_info = self.redis.hgetall(self._get_key(user_id))
+    token_info['expires_at'] = int(token_info['expires_at'])
     if token_info and 'access_token' in token_info:
       if self.sp_oauth.is_token_expired(token_info):
         token_info = self.sp_oauth.refresh_access_token(token_info['refresh_token'])
@@ -36,9 +41,9 @@ class SpotifyUserClient:
     return None
 
   def _save_token(self, user_id, token_info):
-    name = f'spotify_user_token:{user_id}'
-    self.redis.hset(name, mapping=token_info)
-    self.redis.expire(name, SESSION_USER_EXPIRE_TIME)
+    token_info["expires_at"] = int(token_info["expires_at"])
+    self.redis.hset(self._get_key(user_id), mapping=token_info)
+    self.redis.expire(self._get_key(user_id), SESSION_USER_EXPIRE_TIME)
 
   def get_spotify_client(self, user_id):
     token = self._get_token(user_id)
@@ -50,7 +55,9 @@ class SpotifyUserClient:
   def get_auth_url(self):
     return self.sp_oauth.get_authorize_url()
 
-  def fetch_and_store_token(self, user_id, response_url):
-    token_info = self.sp_oauth.get_access_token(response_url)
+  def fetch_and_store_token(self, user_id, code):
+    token_info = self.sp_oauth.get_access_token(code, as_dict=True, check_cache=False)
     self._save_token(user_id, token_info)
     return token_info['access_token']
+
+SpotifyUserClient = SpotifyUserRedisClient()
