@@ -1,3 +1,19 @@
+:root {
+    --border-radius-l: 43.75px;
+    --border-radius-l-inner: 35px;
+    --border-radius-m: 26.25px;
+    --border-radius-s: 8.75px;
+    --border-radius-xs: 5.25px;
+    --unit-xs: 8.75px;
+    --unit-s: 17.5px;
+    --unit-m: 26.25px;
+    --unit-l: 35px;
+    --serif-s: 28px;
+    --serif-m: 36.75px;
+    --serif-l: 52.5px;
+    --serif-logo: 63px;
+  }
+
 body {
   margin: 0;
   font-family: sans-serif;
@@ -30,6 +46,28 @@ body {
   padding: 15px;
   border-style: solid;
   border-width: 1px;
+}
+
+.track-item {
+  display: grid;
+  grid-template-columns: auto 2fr 2fr auto;
+  align-items: center;
+  column-gap: var(--unit-m);
+  padding: 0;
+}
+
+.track-column {
+  min-width: 0;
+}
+
+.track-artist {
+  padding: 1px;
+  margin: 0;
+}
+
+.track-item-name {
+  padding: 1px;
+  margin: 0;
 }
 
 #left-sketch-1, #left-sketch-2, #left-sketch-3 {
