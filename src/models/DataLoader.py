@@ -11,6 +11,7 @@ from src.database.db import SessionLocal
 from src.database.models import Genre, ArtistInGenre
 from src.models.SessionData import Artist, ArtistPool
 from src.services.redis_client import redis_sync
+from src.services.spotify_client import SpotifyClient
 
 
 class ArtistHandler:
@@ -21,8 +22,8 @@ class ArtistHandler:
   b_min = 10
   b_max = 1500
 
-  def __init__(self, sp_session: Spotify=None):
-    self.spotify = sp_session
+  def __init__(self):
+    self.spotify = SpotifyClient.get_spotify_client()
 
   @staticmethod
   def load_pool_to_redis(pool: ArtistPool):
