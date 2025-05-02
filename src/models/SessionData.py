@@ -6,6 +6,8 @@ from pydantic import BaseModel
 from spotipy import Spotify
 from typing import Optional, List, Dict
 
+from src.models.PlaylistEditor import PlaylistEditor
+
 
 class Artist(BaseModel):
   id: int
@@ -48,3 +50,4 @@ class SessionData(BaseModel):
   genres: GenreSelectionData = GenreSelectionData()
   artists: ArtistData = ArtistData()
   spotify: Optional[SpotifySessionData] = None
+  playlist: Optional[PlaylistEditor] = None
