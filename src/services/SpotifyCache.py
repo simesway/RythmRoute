@@ -57,6 +57,14 @@ class Track(SpotifyModel):
   popularity: Optional[int]
   artist_ids: List[str]
 
+  def __hash__(self) -> int:
+    return hash((self.name, tuple(sorted(self.artist_ids))))
+
+  def __eq__(self, other) -> bool:
+    if not isinstance(other, self.__class__):
+      return False
+    return self.id == other.id or (self.name == other.name and set(self.artist_ids) == set(other.artist_ids))
+
 
 class Artist(SpotifyModel):
   popularity: Optional[int]
