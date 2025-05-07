@@ -20,9 +20,11 @@ class SongSampler(ABC):
     self.sp = SpotifyCache()
 
   @staticmethod
-  def is_core_release(release: Release):
+  def is_core_release(release: Release, artist_id: str=None) -> bool:
+    from_main_artist = artist_id == release.artist_ids[0] if artist_id else True
     name = release.name.lower()
-    return not any(keyword in name for keyword in NON_CORE_KEYWORDS)
+    contains_keywords = any(keyword in name for keyword in NON_CORE_KEYWORDS)
+    return from_main_artist and not contains_keywords
 
   def sample_songs(self, artist_ids: List[str], num: int = 5) -> Set[Track]:
     if not artist_ids or num <= 0:
@@ -133,7 +135,7 @@ class AlbumClusterSampler(SongSampler):
   def sample_from_release_clusters(self, artist_ids: List[str], num: int = 5, max_iter: int = 1000) -> Set[Track]:
     releases = [
       release for artist_id in artist_ids
-      for release in self.sp.get_releases(artist_id) or [] if not self.core_only or self.is_core_release(release)
+      for release in self.sp.get_releases(artist_id) or [] if not self.core_only or self.is_core_release(release, artist_id)
     ]
     if not releases:
       return set()
@@ -174,7 +176,7 @@ class FullTrackPoolSampler(SongSampler):
   def sample_from_full_track_pool(self, artist_ids: List[str], num: int) -> Set[Track]:
     releases = [
       release for artist_id in artist_ids
-      for release in self.sp.get_releases(artist_id) or [] if not self.core_only or self.is_core_release(release)
+      for release in self.sp.get_releases(artist_id) or [] if not self.core_only or self.is_core_release(release, artist_id)
     ]
     tracks = set(
       track for release in releases for track in self.sp.get_album_tracks(release.id)
@@ -225,7 +227,7 @@ class NearestReleaseDateSampler(SongSampler):
   def sample_by_target_release_date(self, artist_ids: List[str], num: int, max_iter: int=1000) -> Set[Track]:
     releases: List[Album] = [
       release for artist_id in artist_ids
-      for release in self.sp.get_releases(artist_id) or [] if not self.core_only or self.is_core_release(release)
+      for release in self.sp.get_releases(artist_id) or [] if not self.core_only or self.is_core_release(release, artist_id)
     ]
     weights: List[float] = [
       self.compute_weight(self.parse_release_date_flexible(r.release_date))
