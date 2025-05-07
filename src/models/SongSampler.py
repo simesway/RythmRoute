@@ -2,6 +2,9 @@ from abc import ABC, abstractmethod
 from src.services.SpotifyCache import Album, Track, SpotifyCache, Release
 from typing import Dict, List, Set
 from collections import defaultdict
+from datetime import datetime
+import numpy as np
+import math
 import random
 
 NON_CORE_KEYWORDS = [
@@ -115,7 +118,7 @@ class RandomReleaseSongSampler(SongSampler):
 
 
 class AlbumClusterSampler(SongSampler):
-  def __init__(self, exclude_types: List[str] = None, core_only: bool = True):
+  def __init__(self, exclude_types: List[str] = None, core_only: bool = False):
     super().__init__()
     self.exclude_types = exclude_types or []
     self.core_only = core_only
@@ -161,3 +164,93 @@ class AlbumClusterSampler(SongSampler):
   def sample_multiple_per_artist(self, artist_ids: List[str], num: int) -> Set[Track]:
     sampled_tracks = self.sample_from_release_clusters(artist_ids, num=num)
     return sampled_tracks
+
+
+class FullTrackPoolSampler(SongSampler):
+  def __init__(self, core_only: bool = False):
+    super().__init__()
+    self.core_only = core_only
+
+  def sample_from_full_track_pool(self, artist_ids: List[str], num: int) -> Set[Track]:
+    releases = [
+      release for artist_id in artist_ids
+      for release in self.sp.get_releases(artist_id) or [] if not self.core_only or self.is_core_release(release)
+    ]
+    tracks = set(
+      track for release in releases for track in self.sp.get_album_tracks(release.id)
+      if not self.core_only or self.is_core_release(track)
+    )
+
+    if not tracks:
+      return set()
+
+    if len(tracks) <= num:
+      return tracks
+
+    return random.sample(list(tracks), num)
+
+  def sample_evenly_across_artists(self, artist_ids: List[str], num: int) -> Set[Track]:
+    return self.sample_from_full_track_pool(artist_ids, num=num)
+
+  def sample_multiple_per_artist(self, artist_ids: List[str], num: int) -> Set[Track]:
+    return self.sample_from_full_track_pool(artist_ids, num=num)
+
+
+class NearestReleaseDateSampler(SongSampler):
+  def __init__(self, target_date: datetime, sigma_days: float=180., core_only: bool = False):
+    super().__init__()
+    self.target_date = target_date
+    self.sigma_days = sigma_days
+    self.core_only = core_only
+
+  @staticmethod
+  def parse_release_date_flexible(release_date: str) -> datetime:
+    for fmt in ("%Y-%m-%d", "%Y-%m", "%Y"):
+      try:
+        return datetime.strptime(release_date, fmt)
+      except ValueError:
+        continue
+    raise ValueError(f"Unknown release_date format: {release_date}")
+
+  def compute_weight(self, release_date: datetime) -> float:
+    delta_days = abs((release_date - self.target_date).days)
+    return math.exp(- (delta_days ** 2) / (2 * self.sigma_days ** 2))
+
+  @staticmethod
+  def weighted_sample_no_replace(items: List[Album], weights: List[float]) -> Album:
+    probs = np.array(weights) / sum(weights)
+    indices = np.random.choice(len(items), size=1, replace=False, p=probs)
+    return [items[i] for i in indices][0]
+
+  def sample_by_target_release_date(self, artist_ids: List[str], num: int, max_iter: int=1000) -> Set[Track]:
+    releases: List[Album] = [
+      release for artist_id in artist_ids
+      for release in self.sp.get_releases(artist_id) or [] if not self.core_only or self.is_core_release(release)
+    ]
+    weights: List[float] = [
+      self.compute_weight(self.parse_release_date_flexible(r.release_date))
+      for r in releases
+    ]
+
+    for album, weight in sorted(zip(releases, weights), key=lambda x: x[1]):
+      print(album.name, album.release_date, weight)
+
+    if not releases:
+      return set()
+
+    sampled_tracks = set()
+    while len(sampled_tracks) < num and max_iter > 0:
+      release = self.weighted_sample_no_replace(releases, weights)
+      tracks = self.sp.get_album_tracks(release.id) or []
+      if tracks:
+        track = random.choice(tracks)
+        sampled_tracks.add(track)
+      max_iter -= 1
+
+    return sampled_tracks
+
+  def sample_multiple_per_artist(self, artist_ids: List[str], num: int) -> Set[Track]:
+    return self.sample_by_target_release_date(artist_ids, num=num)
+
+  def sample_evenly_across_artists(self, artist_ids: List[str], num: int) -> Set[Track]:
+    return self.sample_by_target_release_date(artist_ids, num=num)

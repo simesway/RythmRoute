@@ -16,3 +16,4 @@ pydot
 pydantic
 spotipy
 beautifulsoup4
+numpy
