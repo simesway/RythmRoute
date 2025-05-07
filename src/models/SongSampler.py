@@ -232,9 +232,6 @@ class NearestReleaseDateSampler(SongSampler):
       for r in releases
     ]
 
-    for album, weight in sorted(zip(releases, weights), key=lambda x: x[1]):
-      print(album.name, album.release_date, weight)
-
     if not releases:
       return set()
 

@@ -1,6 +1,7 @@
 import json
 from enum import Enum
 from pydantic import BaseModel
+from spotipy import SpotifyException
 from typing import List, Optional, Type, TypeVar
 from src.services.redis_client import redis_sync
 from src.services.spotify_client import SpotifyClient
@@ -40,22 +41,25 @@ class ImageObject(BaseModel):
   height: Optional[int] = None
 
 
-class Album(SpotifyModel):
+class Release(SpotifyModel):
+  artist_ids: List[str] = []
+
+
+class Album(Release):
   type: AlbumType
   release_date: str
   total_tracks: int
-  artist_ids: List[str] = []
   images: List[ImageObject] = []
+  popularity: Optional[int]
 
   class Config:
     use_enum_values = True
 
 
-class Track(SpotifyModel):
+class Track(Release):
   album_id: str
   duration: int
   popularity: Optional[int]
-  artist_ids: List[str]
 
   def __hash__(self) -> int:
     return hash((self.name, tuple(sorted(self.artist_ids))))
@@ -101,7 +105,8 @@ class DataConverter:
       total_tracks=album_data['total_tracks'],
       release_date=album_data['release_date'],
       artist_ids=[a['id'] for a in album_data['artists']],
-      images=DataConverter.to_image_objects(album_data['images'])
+      images=DataConverter.to_image_objects(album_data['images']),
+      popularity=album_data.get('popularity', None)
     )
 
   @staticmethod
@@ -198,8 +203,10 @@ class SpotifyCache:
 
     if data:
       return self.converter.deserialize(Track, data)
-
-    tracks = self.spotify.album_tracks(album_id)['items']
+    try:
+      tracks = self.spotify.album_tracks(album_id)['items']
+    except SpotifyException:
+      return []
     data = [self.converter.to_track(t, album_id) for t in tracks]
     self.redis.setex(key, CacheConfig.ALBUM_TRACKS_TTL, self.converter.serialize(data))
     return data
