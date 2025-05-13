@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
-from typing import List, Literal, Optional, Any
+from typing import List, Optional, Any, Union, Literal
 import math
 import numpy as np
 
@@ -64,22 +64,34 @@ class WeightedSampling(SamplingStrategy):
       random.seed(seed)
     return random.choices(items, weights=self.weights, k=1)[0]
 
+
 class AttributeWeightedSampling(SamplingStrategy):
   attr: str
   higher_is_better: bool
   alpha: float = 1.0
+  mode: Literal["rank", "log", "softmax"] = "rank"
 
-  def log_weights(self, items):
-    values = [math.log(getattr(item, self.attr) + 1e-6) for item in items]
-    return values if self.higher_is_better else [1 / (v + 1e-6) for v in values]
+  def sample(self, items):
+    if self.mode == "log":
+      return self.log(items)
+    elif self.mode == "softmax":
+      return self.softmax(items)
+    else:
+      return self.rank_based(items)
 
-  def soft_max(self, items):
+  def log(self, items):
+    weights = [math.log(getattr(item, self.attr) + 1e-6) for item in items]
+    weights = weights if self.higher_is_better else [1 / (v + 1e-6) for v in weights]
+    return random.choices(items, weights=weights, k=1)[0]
+
+  def softmax(self, items):
     vals = np.array([getattr(item, self.attr) for item in items])
     vals = vals if self.higher_is_better else -vals
     exp_vals = np.exp(vals - np.max(vals))  # for numerical stability
-    return exp_vals / np.sum(exp_vals)
+    weights = exp_vals / np.sum(exp_vals)
+    return random.choices(items, weights=weights, k=1)[0]
 
-  def rank_based(self, items, exponent):
+  def rank_based(self, items):
     attr_values = np.array([getattr(item, self.attr) for item in items])
     sorted_indices = np.argsort(attr_values)
 
@@ -93,10 +105,7 @@ class AttributeWeightedSampling(SamplingStrategy):
   def apply(self, items: List[Any], seed: Optional[int] = None) -> Any:
     if seed is not None:
       random.seed(seed)
-    #values = [getattr(item, self.attr) for item in items]
-    #weights = self.soft_max(items)
-    #return random.choices(items, weights=weights, k=1)[0]
-    return self.rank_based(items, 4)
+    return self.sample(items)
 
 class WeightedCombinedSampler(SamplingStrategy):
   samplers: List[SamplingStrategy]
@@ -111,3 +120,10 @@ class WeightedCombinedSampler(SamplingStrategy):
       sampler: SamplingStrategy = random.choices(self.samplers, weights=self.weights, k=1)[0]
       result.append(sampler.apply(items, seed))
     return result
+
+SamplingStrategyType = Union[
+  RandomSampling,
+  WeightedSampling,
+  AttributeWeightedSampling,
+  WeightedCombinedSampler
+]
