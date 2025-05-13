@@ -1,5 +1,4 @@
 from typing import List, Dict, Optional
-from spotipy import Spotify
 import json
 
 from sqlalchemy.orm import joinedload
@@ -23,13 +22,14 @@ class ArtistHandler:
   b_max = 1500
 
   def __init__(self):
-    self.spotify = SpotifyClient.get_spotify_client()
+    self.spotify = SpotifyClient().get_spotify_client()
 
   @staticmethod
   def load_pool_to_redis(pool: ArtistPool):
     redis_sync.setex(f"pool:genre:{int(pool.genre_id)}", CACHE_OBJECT_TTL, pool.model_dump_json())
 
-  def load_pool_from_redis(self, genre_id) -> Optional[ArtistPool]:
+  @staticmethod
+  def load_pool_from_redis(genre_id) -> Optional[ArtistPool]:
     pool_data = redis_sync.get(f"pool:genre:{int(genre_id)}")
     return ArtistPool(**json.loads(pool_data)) if pool_data else None
 
