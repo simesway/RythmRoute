@@ -1,63 +1,98 @@
+from time import time
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
+from spotipy.cache_handler import CacheHandler
 from src.services.redis_client import redis_sync
-from src.config import SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, SPOTIPY_SCOPE, SESSION_USER_EXPIRE_TIME
+from src.config import (
+  SPOTIPY_CLIENT_ID,
+  SPOTIPY_CLIENT_SECRET,
+  SPOTIPY_REDIRECT_URI,
+  SPOTIPY_SCOPE,
+  SESSION_USER_EXPIRE_TIME,
+)
+
+
+class NoCacheHandler(CacheHandler):
+  def get_cached_token(self):
+    return None
+
+  def save_token_to_cache(self, token_info):
+    pass
 
 
 class SpotifyClient:
-  @staticmethod
-  def get_spotify_client():
-    auth_manager = SpotifyClientCredentials(
-      client_id=SPOTIPY_CLIENT_ID,
-      client_secret=SPOTIPY_CLIENT_SECRET
-    )
-    return spotipy.Spotify(auth_manager=auth_manager)
-
-
-
-class SpotifyUserRedisClient:
   def __init__(self):
+    self.auth_manager = SpotifyClientCredentials(
+      client_id=SPOTIPY_CLIENT_ID,
+      client_secret=SPOTIPY_CLIENT_SECRET,
+      cache_handler=NoCacheHandler()
+    )
+
+  def get_spotify_client(self):
+    return spotipy.Spotify(auth_manager=self.auth_manager)
+
+
+class RedisCacheHandler(CacheHandler):
+  def __init__(self, user_id):
     self.redis = redis_sync
-    self.sp_oauth = SpotifyOAuth(
+    self.key = f'spotify_user_token:{user_id}'
+
+  def get_cached_token(self):
+    token_info = self.redis.hgetall(self.key)
+    if not token_info:
+      return None
+    token_info['expires_at'] = int(token_info['expires_at'])
+    return token_info
+
+  def save_token_to_cache(self, token_info):
+    token_info['expires_at'] = int(token_info['expires_at'])
+    ttl = token_info['expires_at'] - int(time())
+    self.redis.hset(self.key, mapping=token_info)
+    self.redis.expire(self.key, ttl)
+
+
+class SpotifyUserClient:
+  @staticmethod
+  def get_spotify_client(user_id):
+    cache_handler = RedisCacheHandler(user_id)
+    sp_oauth = SpotifyOAuth(
       client_id=SPOTIPY_CLIENT_ID,
       client_secret=SPOTIPY_CLIENT_SECRET,
       redirect_uri=SPOTIPY_REDIRECT_URI,
       scope=SPOTIPY_SCOPE,
-      cache_handler=None
+      cache_handler=cache_handler
     )
 
-  @staticmethod
-  def _get_key(user_id: str):
-    return f'spotify_user_token:{user_id}'
-
-  def _get_token(self, user_id):
-    token_info = self.redis.hgetall(self._get_key(user_id))
-    token_info['expires_at'] = int(token_info['expires_at'])
+    token_info = cache_handler.get_cached_token()
     if token_info and 'access_token' in token_info:
-      if self.sp_oauth.is_token_expired(token_info):
-        token_info = self.sp_oauth.refresh_access_token(token_info['refresh_token'])
-        self._save_token(user_id, token_info)
-      return token_info['access_token']
-    return None
+      if sp_oauth.is_token_expired(token_info):
+        token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
+        cache_handler.save_token_to_cache(token_info)
+      return spotipy.Spotify(auth=token_info['access_token'])
 
-  def _save_token(self, user_id, token_info):
-    token_info["expires_at"] = int(token_info["expires_at"])
-    self.redis.hset(self._get_key(user_id), mapping=token_info)
-    self.redis.expire(self._get_key(user_id), SESSION_USER_EXPIRE_TIME)
+    raise Exception("No token available. User needs to log in.")
 
-  def get_spotify_client(self, user_id):
-    token = self._get_token(user_id)
-    if token:
-      return spotipy.Spotify(auth=token)
-    else:
-      raise Exception("No token available. User needs to log in.")
+  @staticmethod
+  def get_auth_url(user_id):
+    sp_oauth = SpotifyOAuth(
+      client_id=SPOTIPY_CLIENT_ID,
+      client_secret=SPOTIPY_CLIENT_SECRET,
+      redirect_uri=SPOTIPY_REDIRECT_URI,
+      scope=SPOTIPY_SCOPE,
+      cache_handler=RedisCacheHandler(user_id)
+    )
+    return sp_oauth.get_authorize_url()
 
-  def get_auth_url(self):
-    return self.sp_oauth.get_authorize_url()
-
-  def fetch_and_store_token(self, user_id, code):
-    token_info = self.sp_oauth.get_access_token(code, as_dict=True, check_cache=False)
-    self._save_token(user_id, token_info)
+  @staticmethod
+  def fetch_and_store_token(user_id, code):
+    cache_handler = RedisCacheHandler(user_id)
+    sp_oauth = SpotifyOAuth(
+      client_id=SPOTIPY_CLIENT_ID,
+      client_secret=SPOTIPY_CLIENT_SECRET,
+      redirect_uri=SPOTIPY_REDIRECT_URI,
+      scope=SPOTIPY_SCOPE,
+      cache_handler=cache_handler
+    )
+    token_info = sp_oauth.get_access_token(code, as_dict=True, check_cache=False)
+    cache_handler.save_token_to_cache(token_info)
     return token_info['access_token']
-
-SpotifyUserClient = SpotifyUserRedisClient()
