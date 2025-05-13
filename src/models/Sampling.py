@@ -38,6 +38,8 @@ class CombinedFilter(Filter):
       items = f(items)
     return items
 
+FilterTypes = Union[AttributeFilter, CombinedFilter]
+
 ### SAMPLING
 
 class SamplingStrategy(BaseModel, ABC):
