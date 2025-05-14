@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse
 from src.models.SessionData import SessionData
 from src.services.session_manager import get_session
