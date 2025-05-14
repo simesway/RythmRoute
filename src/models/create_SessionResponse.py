@@ -9,16 +9,17 @@ async def create_SessionResponse(session: SessionData) -> SessionResponse:
   if not session:
     session = SessionData(id="temp")
 
-  genres, relations, layout = StartingGenresStrategy().to_GenreGraphData(session)
+  genres, relations, layout = StartingGenresStrategy().to_GenreGraphData(
+    selected=set(session.genres.selected),
+    expanded=set(session.genres.expanded),
+    highlight=session.genres.highlight
+  )
   genre_graph_data = GenreGraphData(relationships=relations, layout=layout)
   genre_data = GenreData(genres=genres, state=session.genres)
 
   artist_map = True
   artist_data = None
   if artist_map:
-    sp = SpotifyUserClient.get_spotify_client(session.id)
-
-
     pools = []
     for genre_id in session.genres.selected:
       pool = ArtistHandler().get_pool(genre_id)

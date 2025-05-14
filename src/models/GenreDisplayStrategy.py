@@ -1,19 +1,17 @@
-from abc import ABC, abstractmethod
-from networkx.drawing.nx_agraph import graphviz_layout
-
 import networkx as nx
 from networkx.readwrite import json_graph
-from typing import List, Tuple
+from networkx.drawing.nx_agraph import graphviz_layout
+from abc import ABC, abstractmethod
+from typing import List, Tuple, Set
 
 from src.database.models import RelationshipTypeEnum
 from src.models.SessionResponse import Genre, GenreRelationship, Coordinate
 from src.core.GenreGraph import GenreGraph
-from src.models.SessionData import SessionData
 
 
 class DisplayStrategy(ABC):
   @abstractmethod
-  def generate_subgraph(self, session: SessionData):
+  def generate_subgraph(self, selected: Set[int], expanded: Set[int], highlight: int = None):
     """Must be implemented by subclasses."""
     pass
 
@@ -33,16 +31,16 @@ class DisplayStrategy(ABC):
     layout = self.generate_layout(graph)
     return self.normalize_layout(layout)
 
-  def to_json(self, session: SessionData):
-    subgraph = self.generate_subgraph(session)
+  def to_json(self, selected: Set[int], expanded: Set[int], highlight: int = None):
+    subgraph = self.generate_subgraph(selected, expanded, highlight)
 
     node_edges = json_graph.node_link_data(subgraph)
     layout = self.get_json_layout(subgraph)
     data = self.generate_data()
     return {"graph": node_edges, "layout": layout, "data": data}
 
-  def to_GenreGraphData(self, session: SessionData) -> Tuple[List[Genre], List[GenreRelationship], dict]:
-    subgraph = self.generate_subgraph(session)
+  def to_GenreGraphData(self, selected: Set[int], expanded: Set[int], highlight: int = None) -> Tuple[List[Genre], List[GenreRelationship], dict]:
+    subgraph = self.generate_subgraph(selected, expanded, highlight)
     node_edges = json_graph.node_link_data(subgraph)
     layout = self.get_json_layout(subgraph)
 
@@ -126,12 +124,7 @@ class StartingGenresStrategy(DisplayStrategy):
         stack.extend(graph.successors(current))
     return nodes - all_descendants
 
-  def generate_subgraph(self, session: SessionData):
-
-    selected = set(session.genres.selected or [])
-    expanded = set(session.genres.expanded or [])
-    highlight = session.genres.highlight
-
+  def generate_subgraph(self, selected: Set[int], expanded: Set[int], highlight: int = None) -> nx.DiGraph:
     all_nodes = self.starting_genres | selected
 
     # Add subgenres between starting genres
