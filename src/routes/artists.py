@@ -68,3 +68,18 @@ async def update_graph(request: GraphUpdate, session: SessionData = Depends(get_
   response = create_SessionResponse(session)
   return response
 
+@router.get("/album/{artist_id}")
+async def get_artist(artist_id: str):
+  tracks = SpotifyCache().get_album_tracks(artist_id)
+  return tracks
+
+
+@router.get("/releases/{artist_id}")
+async def get_releases(artist_id: str):
+  return SpotifyCache().get_releases(artist_id)
+
+
+@router.get("/top_tracks/{artist_id}")
+async def get_releases(artist_id: str):
+  return SpotifyCache().get_top_tracks(artist_id)
+

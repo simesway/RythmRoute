@@ -3,7 +3,7 @@ import ArtistMap from './ArtistMap.js';
 let artistMapSketch = (p) => {
   let artist_map;
   p.setup = () => {
-    p.createCanvas(p.windowWidth * 2 / 3, p.windowHeight);
+    p.createCanvas(p.windowWidth * 2 / 3, p.windowHeight * 2/3);
     p.background(60);
     artist_map = new ArtistMap(p);
 
@@ -19,7 +19,7 @@ let artistMapSketch = (p) => {
   };
 
   p.windowResized = () => {
-    p.resizeCanvas(p.windowWidth * 2/3, p.windowHeight);
+    p.resizeCanvas(p.windowWidth * 2/3, p.windowHeight * 2/3);
   };
 
   p.keyPressed = () => {

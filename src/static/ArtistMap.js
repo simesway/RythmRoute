@@ -76,6 +76,8 @@ class ArtistMap {
     this.atmospheric_color = p.color(0, 0, 120);
     this.bouncy_color = p.color('#FE9000');
 
+    this.sampledPanel = document.getElementById("sampled-artists-panel");
+
     this.draw_dot = false;
 
     this.session.subscribe((state) => {
@@ -108,6 +110,29 @@ class ArtistMap {
     this.o_min = Math.min(...o_values);
     this.o_max = Math.max(...o_values);
 
+    this.render_sampled_artists();
+  }
+
+  render_sampled_artists() {
+    this.sampledPanel.innerHTML = "";
+
+    for (let pool of this.pools) {
+      const pool_div = document.createElement("div");
+      const header = document.createElement("h3");
+      header.innerText = pool.name;
+
+      const artist_list = document.createElement("ul");
+      for (let artist of pool.artists.filter(artist => pool.sampled.includes(Number(artist.id)))) {
+        let artist_name = artist.name;
+        const artist_li = document.createElement("li");
+        artist_li.innerText = artist_name;
+        artist_list.appendChild(artist_li);
+      }
+
+      pool_div.appendChild(header);
+      pool_div.appendChild(artist_list);
+      this.sampledPanel.appendChild(pool_div);
+    }
   }
 
   draw_legend() {

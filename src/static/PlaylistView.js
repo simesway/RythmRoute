@@ -58,6 +58,11 @@ class PlaylistManager {
 
   render(data) {
     this.data = data;
+
+    if (!data) {
+      this.createPlaylistUI();
+    }
+
     let {name, description, tracks, albums, artists} = data;
     this.container.innerHTML = "";
 

@@ -74,6 +74,39 @@ body {
   flex: 2;  /* Left panel takes 2/3 of the width */
 }
 
+
+.album-artist-panel {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    box-sizing: border-box;
+    background-color: #f0f0f0;
+}
+
+.settings-panel {
+    border: 1px solid #ccc;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 20px;
+    box-sizing: border-box;
+    background-color: #f0f0f0;
+}
+
+.playlist-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 20px;
+    box-sizing: border-box;
+    background-color: #f0f0f0;
+}
+
 .right-panel {
   flex: 1;  /* Right panel takes 1/3 of the width */
   display: flex;
