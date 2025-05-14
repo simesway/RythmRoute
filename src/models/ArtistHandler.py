@@ -1,3 +1,4 @@
+from pydantic import BaseModel
 from typing import List, Dict, Optional
 import json
 
@@ -8,9 +9,25 @@ from random import random
 from src.config import DB_SCRAPE_TIME_DELTA_DAYS, CACHE_OBJECT_TTL
 from src.core.db import SessionLocal
 from src.database.models import Genre, ArtistInGenre
-from src.models.SessionData import Artist, ArtistPool
 from src.core.redis_client import redis_sync
 from src.core.spotify_client import SpotifyClient
+
+
+class Artist(BaseModel):
+  id: int
+  spotify_id: str
+  name: str
+  bouncyness: float
+  organicness: float
+  popularity: int
+
+
+class ArtistPool(BaseModel):
+  genre_id: int
+  name: str
+  bouncyness: float
+  organicness: float
+  artists: List[Artist]
 
 
 class ArtistHandler:

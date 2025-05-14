@@ -6,23 +6,9 @@ from pydantic import BaseModel
 from spotipy import Spotify
 from typing import Optional, List, Dict
 
+from src.models.ArtistHandler import ArtistPool
 from src.models.PlaylistEditor import PlaylistEditor
 
-
-class Artist(BaseModel):
-  id: int
-  spotify_id: str
-  name: str
-  bouncyness: float
-  organicness: float
-  popularity: int
-
-class ArtistPool(BaseModel):
-  genre_id: int
-  name: str
-  bouncyness: float
-  organicness: float
-  artists: List[Artist]
 
 class ArtistData(BaseModel):
   pools: List[ArtistPool] = []

@@ -1,12 +1,9 @@
 from dataclasses import field
-
+from pydantic import BaseModel
 from typing import Optional, Dict, List
 
-from src.models.SessionData import GenreSelectionData, Artist, ArtistData, ArtistPool
-from pydantic import BaseModel
-
-
-
+from src.models.SessionData import GenreSelectionData
+from src.models.ArtistHandler import ArtistPool
 
 class GenreRelationship(BaseModel):
   source: int
