@@ -9,9 +9,9 @@ router = APIRouter(prefix="/spotify")
 
 
 @router.get("/login")
-async def login():
+async def login(session: SessionData = Depends(get_session)):
   """Redirect user to Spotify login page."""
-  return RedirectResponse(SpotifyUserClient.get_auth_url())
+  return RedirectResponse(SpotifyUserClient.get_auth_url(session.id))
 
 @router.get("/callback")
 async def callback(code: str, session: SessionData = Depends(get_session)):
