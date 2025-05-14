@@ -2,7 +2,7 @@ from typing import Set, Dict, Optional, Literal, List
 from pydantic import BaseModel, Field
 
 from src.models.ArtistHandler import ArtistHandler
-from src.models.Sampling import SamplingStrategyType, FilterTypes
+from src.models.ObjectSampling import SamplingStrategyType, FilterTypes
 from src.models.SongSampler import SongSamplerConfig, SAMPLERS
 from src.core.SpotifyCache import Track
 

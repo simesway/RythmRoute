@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
 from src.models.ArtistHandler import ArtistHandler
-from src.models.Sampling import AttributeWeightedSampling
+from src.models.ObjectSampling import AttributeWeightedSampling
 from src.models.clientData import GraphUpdate
 from src.models.create_SessionResponse import create_SessionResponse
 from src.models.SessionData import SessionData
