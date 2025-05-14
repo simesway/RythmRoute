@@ -1,5 +1,5 @@
 from typing import Union, List, Dict
-from db import SessionLocal
+from src.core.db import SessionLocal
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 

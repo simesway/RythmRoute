@@ -5,7 +5,7 @@ from src.models.clientData import GraphUpdate
 from src.models.create_SessionResponse import create_SessionResponse
 from src.models.SessionData import SessionData
 from src.models.graph import GenreGraph
-from src.services.session_manager import get_session, store_session
+from src.core.session_manager import get_session, store_session
 
 router = APIRouter(prefix="/graph", default_response_class=JSONResponse)
 

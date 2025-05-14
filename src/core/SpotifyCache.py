@@ -3,8 +3,8 @@ from enum import Enum
 from pydantic import BaseModel
 from spotipy import SpotifyException
 from typing import List, Optional, Type, TypeVar
-from src.services.redis_client import redis_sync
-from src.services.spotify_client import SpotifyClient
+from src.core.redis_client import redis_sync
+from src.core.spotify_client import SpotifyClient
 
 
 class CacheConfig:

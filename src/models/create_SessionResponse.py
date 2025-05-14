@@ -1,11 +1,8 @@
-from spotipy import Spotify
-
-from src.models.DataLoader import ArtistHandler
+from src.models.ArtistHandler import ArtistHandler
 from src.models.GenreDisplayStrategy import StartingGenresStrategy
 from src.models.SessionResponse import SessionResponse, ArtistMapData, GenreGraphData, GenreData
-from src.models.SessionData import SessionData, ArtistPool, ArtistData
-from src.routes.spotify import get_spotify_session
-from src.services.session_manager import store_session
+from src.models.SessionData import SessionData
+from src.core.spotify_client import SpotifyUserClient
 
 
 async def create_SessionResponse(session: SessionData) -> SessionResponse:
@@ -19,13 +16,12 @@ async def create_SessionResponse(session: SessionData) -> SessionResponse:
   artist_map = True
   artist_data = None
   if artist_map:
-    sp_session = await get_spotify_session(session)
-    spotify = Spotify(auth=sp_session.access_token)
+    sp = SpotifyUserClient.get_spotify_client(session.id)
 
 
     pools = []
     for genre_id in session.genres.selected:
-      pool = ArtistHandler(sp_session=spotify).get_pool(genre_id)
+      pool = ArtistHandler().get_pool(genre_id)
       pools.append(pool)
     artist_data = ArtistMapData(pools=pools, sampled=session.artists.sampled or {})
 

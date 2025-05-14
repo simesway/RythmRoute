@@ -2,7 +2,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy import select
 from tqdm import tqdm
 
-from src.database.db import SessionLocal
+from src.core.db import SessionLocal
 from src.database.models import Genre, RelationshipTypeEnum, GenreRelationship, Artist, ArtistInGenre
 from src.database.selects import find_matching_genre, find_matching_artist
 from src.scraping.MusicBrainz import get_genres, get_genre_page

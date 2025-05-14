@@ -1,6 +1,6 @@
 from sqlalchemy import text
 from src.database.models import Base
-from src.database.db import engine
+from src.core.db import engine
 
 def create_tables():
   Base.metadata.create_all(engine)

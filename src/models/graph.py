@@ -1,7 +1,7 @@
 import networkx as nx
 from threading import Lock
 from collections import deque
-from src.database.db import SessionLocal
+from src.core.db import SessionLocal
 from src.database.models import RelationshipTypeEnum, Genre
 from src.database.selects import get_all_mb_genres, get_all_relationships
 

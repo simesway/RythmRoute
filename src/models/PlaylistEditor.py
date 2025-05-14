@@ -2,7 +2,7 @@ from pydantic import BaseModel, PrivateAttr
 from typing import List, Optional
 from spotipy import Spotify
 
-from src.services.SpotifyCache import Track, SpotifyCache
+from src.core.SpotifyCache import Track, SpotifyCache
 
 
 class PlaylistEditor(BaseModel):

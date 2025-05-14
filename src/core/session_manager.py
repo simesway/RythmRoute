@@ -5,7 +5,7 @@ from fastapi import Request, Response
 from typing import Optional
 
 from src.config import SESSION_USER_EXPIRE_TIME
-from src.services.redis_client import redis_client
+from src.core.redis_client import redis_client
 from src.models.SessionData import SessionData
 
 

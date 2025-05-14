@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse
 from src.models.SessionData import SessionData
-from src.services.session_manager import get_session
+from src.core.session_manager import get_session
 
-from src.services.spotify_client import SpotifyUserClient
+from src.core.spotify_client import SpotifyUserClient
 
 router = APIRouter(prefix="/spotify")
 

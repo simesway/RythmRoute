@@ -1,23 +1,20 @@
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
-from spotipy import Spotify
 
-from src.database.db import SessionLocal
-from src.models.DataLoader import ArtistHandler
+from src.models.ArtistHandler import ArtistHandler
 from src.models.Sampling import AttributeWeightedSampling
 from src.models.clientData import GraphUpdate
 from src.models.create_SessionResponse import create_SessionResponse
 from src.models.SessionData import SessionData
 from src.models.graph import GenreGraph
-from src.routes.spotify import get_spotify_session
-from src.services.session_manager import get_session, store_session
+from src.core.SpotifyCache import SpotifyCache
+from src.core.session_manager import get_session, store_session
 
 router = APIRouter(prefix="/artists", default_response_class=JSONResponse)
 
 @router.post("/sample/{genre_id}")
 async def sample_artists(genre_id: int, sampler: AttributeWeightedSampling, session: SessionData = Depends(get_session)):
-  spotify = await get_spotify_session(session)
-  pool = ArtistHandler(sp_session=spotify).get_pool(genre_id)
+  pool = ArtistHandler().get_pool(genre_id)
 
   artists = pool.artists
   sampled = []

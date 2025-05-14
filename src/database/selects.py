@@ -1,4 +1,4 @@
-from src.database.db import SessionLocal
+from src.core.db import SessionLocal
 from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import aliased
 

@@ -2,7 +2,7 @@ from time import time
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
 from spotipy.cache_handler import CacheHandler
-from src.services.redis_client import redis_sync
+from src.core.redis_client import redis_sync
 from src.config import (
   SPOTIPY_CLIENT_ID,
   SPOTIPY_CLIENT_SECRET,

@@ -6,11 +6,11 @@ from datetime import datetime, timedelta
 
 from random import random
 from src.config import DB_SCRAPE_TIME_DELTA_DAYS, CACHE_OBJECT_TTL
-from src.database.db import SessionLocal
+from src.core.db import SessionLocal
 from src.database.models import Genre, ArtistInGenre
 from src.models.SessionData import Artist, ArtistPool
-from src.services.redis_client import redis_sync
-from src.services.spotify_client import SpotifyClient
+from src.core.redis_client import redis_sync
+from src.core.spotify_client import SpotifyClient
 
 
 class ArtistHandler:

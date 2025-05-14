@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from src.services.SpotifyCache import Album, Track, SpotifyCache, Release
+from src.core.SpotifyCache import Album, Track, SpotifyCache, Release
 from typing import Dict, List, Set, Union
 from collections import defaultdict
 from datetime import datetime
