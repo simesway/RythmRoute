@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
 from src.models.clientData import GraphUpdate
 from src.models.create_SessionResponse import create_SessionResponse
 from src.models.SessionData import SessionData
-from src.models.graph import GenreGraph
+from src.core.GenreGraph import GenreGraph
 from src.core.session_manager import get_session, store_session
 
 router = APIRouter(prefix="/graph", default_response_class=JSONResponse)
@@ -51,8 +51,7 @@ async def update_graph(request: GraphUpdate, session: SessionData = Depends(get_
   return response
 
 @router.get("/current_state")
-async def get_current_graph(request: Request, session: SessionData = Depends(get_session)):
-  #session = await get_session(request)
+async def get_current_graph(session: SessionData = Depends(get_session)):
   response = await create_SessionResponse(session)
   return response
 

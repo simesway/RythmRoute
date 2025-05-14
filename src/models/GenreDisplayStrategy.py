@@ -6,8 +6,8 @@ from networkx.readwrite import json_graph
 from typing import List, Tuple
 
 from src.database.models import RelationshipTypeEnum
-from src.models.SessionResponse import GenreGraphData, Genre, GenreRelationship, Coordinate
-from src.models.graph import GenreGraph
+from src.models.SessionResponse import Genre, GenreRelationship, Coordinate
+from src.core.GenreGraph import GenreGraph
 from src.models.SessionData import SessionData
 
 

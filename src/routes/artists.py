@@ -6,7 +6,7 @@ from src.models.ObjectSampling import AttributeWeightedSampling
 from src.models.clientData import GraphUpdate
 from src.models.create_SessionResponse import create_SessionResponse
 from src.models.SessionData import SessionData
-from src.models.graph import GenreGraph
+from src.core.GenreGraph import GenreGraph
 from src.core.SpotifyCache import SpotifyCache
 from src.core.session_manager import get_session, store_session
 
