@@ -2,7 +2,6 @@ from dataclasses import field
 from pydantic import BaseModel
 from typing import Optional, Dict, List
 
-from src.models.SessionData import GenreSelectionData
 from src.models.ArtistHandler import ArtistPool
 
 class GenreRelationship(BaseModel):
@@ -17,6 +16,11 @@ class Genre(BaseModel):
   organicness: Optional[float] = None
   has_subgenre: bool
   is_selectable: bool
+
+class GenreSelectionData(BaseModel):
+  selected: List[int] = []
+  expanded: List[int] = []
+  highlight: Optional[int] = None
 
 class GenreData(BaseModel):
   genres: List[Genre] = []

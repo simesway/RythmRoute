@@ -1,25 +1,14 @@
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import JSONResponse
 
-from src.models.ArtistHandler import ArtistHandler
 from src.models.PlaylistEditor import PlaylistEditor
 from src.models.SessionData import SessionData
-from src.models.SongSampler import SongSampler
+from src.models.SongSampler import TopSongsConfig
 
 from src.core.session_manager import get_session, store_session
 from src.core.spotify_client import SpotifyUserClient
 
 router = APIRouter(prefix="/playlist", default_response_class=JSONResponse)
-
-def sample_songs(session: SessionData):
-  sampled_songs = {}
-  for g in session.genres.selected:
-    pool = ArtistHandler().get_pool(g)
-    sampled = session.artists.sampled[g]
-    artist_ids = [a.spotify_id for a in pool.artists if a.id in sampled]
-    songs = SongSampler().sample_songs(artist_ids, 2)
-    sampled_songs[g] = songs
-  return sampled_songs
 
 @router.post("/create")
 async def create_playlist(request: Request, session: SessionData = Depends(get_session)):
@@ -40,10 +29,11 @@ async def create_playlist(request: Request, session: SessionData = Depends(get_s
     playlist = session.playlist
     playlist.set_spotify_client(sp)
 
-  genre_songs = sample_songs(session)
-  tracks = [song for genre, songs in genre_songs.items() for song in songs]
+  for g_id in session.factory.selected_genres():
+    session.factory.sample_tracks(g_id, TopSongsConfig(), limit=data["length"])
+  tracks = session.factory.sampled_tracks()
 
-  playlist.add_tracks(tracks)
+  playlist.add_tracks(list(tracks))
 
   session.playlist = playlist
   await store_session(session)

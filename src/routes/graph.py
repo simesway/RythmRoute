@@ -14,37 +14,37 @@ router = APIRouter(prefix="/graph", default_response_class=JSONResponse)
 @router.post("/update")
 async def update_graph(request: GraphUpdate, session: SessionData = Depends(get_session)):
   action = request.action
+  f = session.factory
+
+  if request.name is not None and request.id is None:
+    request.id = GenreGraph().get_genre_id(request.name)
+
+  genre_id = request.id
+
+  if genre_id is None:
+    raise ValueError("Genre ID must be provided.")
 
   if action == "expand":
-    s = session.genres.expanded
-    if request.name is not None and request.id is None:
-      request.id = GenreGraph().get_genre_id(request.name)
+    if genre_id not in f.genres:
+      f.add_genre(genre_id)
 
-
-    if not request.id in s:
-      session.genres.highlight = request.id
-      s.append(request.id)
-    else:
-      #session.genres.highlight = None
-      s.remove(request.id)
+    f.toggle_expand(genre_id)
 
   elif action == "highlight":
-    session.genres.highlight = request.id
+    pass
 
   elif action == "select":
-    s = session.genres.selected
-    s.append(request.id) if not request.id in s else s.remove(request.id)
-    session.genres.highlight = request.id
+    if genre_id not in f.genres:
+      f.add_genre(genre_id)
+    f.toggle_select(request.id)
 
   elif action == "reset":
-    session.genres.expanded = []
-    session.genres.selected = []
-    session.genres.highlight = None
+    f.clear()
 
   elif action == "collapse":
-    session.genres.expanded = []
-    session.genres.highlight = None
+    f.collapse_all()
 
+  f.remove_unexplored()
 
   await store_session(session)
   response = await create_SessionResponse(session)
