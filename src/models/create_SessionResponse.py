@@ -15,7 +15,7 @@ async def create_SessionResponse(session: SessionData) -> SessionResponse:
   genres, relations, layout = StartingGenresStrategy().to_GenreGraphData(
     selected=set(selected_genres),
     expanded=set(expanded_genres),
-    highlight=session.genres.highlight
+    highlight=-1
   )
   genre_graph_data = GenreGraphData(relationships=relations, layout=layout)
   genre_data = GenreData(
@@ -23,7 +23,7 @@ async def create_SessionResponse(session: SessionData) -> SessionResponse:
     state=GenreSelectionData(
       selected=selected_genres,
       expanded=expanded_genres,
-      highlight=session.genres.highlight
+      highlight=-1
     )
   )
 
