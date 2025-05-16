@@ -1,5 +1,5 @@
 from pydantic import BaseModel, PrivateAttr
-from typing import List, Optional
+from typing import List, Optional, Set, Union
 from spotipy import Spotify
 
 from src.core.SpotifyCache import Track, SpotifyCache
@@ -32,12 +32,16 @@ class PlaylistEditor(BaseModel):
     )
     self.id = response['id']
 
-  def add_tracks(self, tracks: List[Track]):
+  def add_tracks(self, tracks: Union[Set[Track], List[Track]]):
+    if tracks is None:
+      return
     self._check_session()
     self._spotify.playlist_add_items(self.id, [t.id for t in tracks])
     self.tracks.extend(tracks)
 
-  def remove_tracks(self, tracks: List[Track]):
+  def remove_tracks(self, tracks: Union[Set[Track], List[Track]]):
+    if len(tracks) == 0:
+      return
     self._check_session()
     track_ids = [t.id for t in tracks]
     self._spotify.playlist_remove_all_occurrences_of_items(self.id, track_ids)
