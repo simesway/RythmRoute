@@ -1,46 +1,57 @@
+let container_id = 'genre-graph';
+
 let genreMapSketch = (p) => {
   let genre_map;
+  let canvas;
+
   p.setup = () => {
-    canvas = p.createCanvas(p.windowWidth * 2 / 3, p.windowHeight);
-    p.background(60);
+    const container = document.getElementById(container_id);
+    const w = container.offsetWidth;
+    const h = container.offsetHeight;
+    canvas = p.createCanvas(w, h);
+    canvas.parent(container);
     genre_map = new GenreMap(p);
     canvas.elt.oncontextmenu = () => false;
+    p.frameRate(30);
   };
 
   p.draw = () => {
-    p.background(100);
+    p.background("#838383");
     genre_map.update(0.05);
     genre_map.draw();
     p.strokeWeight(2);
     p.stroke(0);
     p.line(p.mouseX, p.mouseY, p.pmouseX, p.pmouseY);
+    p.fill(0);
+    p.noStroke();
+    p.textAlign(p.LEFT, p.CENTER);
+    p.textSize(16);
+    p.text("FPS: " + p.frameRate().toFixed(2), 10, 20);
   };
 
   p.windowResized = () => {
-    p.resizeCanvas(p.windowWidth * 2/3, p.windowHeight);
+    const container = document.getElementById(container_id);
+    const w = container.offsetWidth;
+    const h = container.offsetHeight;
+    p.resizeCanvas(w, h);
+    genre_map.windowResized(w, h);
   };
 
   p.mousePressed = () => {
-    if (inCanvas()) {
-      genre_map.mousePressed();
-    }
+    if (inCanvas()) genre_map.mousePressed();
   };
 
   p.keyPressed = () => {
-    if (inCanvas()) {
-      genre_map.keyPressed();
-    }
+    if (inCanvas()) genre_map.keyPressed();
   };
 
   p.mouseMoved = () => {
-    if (inCanvas()) {
-      genre_map.mouseMoved();
-    }
+    if (inCanvas()) genre_map.mouseMoved();
   };
 
-  function inCanvas(){
-    return p.mouseX > 0 && p.mouseX < p.width && p.mouseY > 0 && p.mouseY < p.height
+  function inCanvas() {
+    return p.mouseX > 0 && p.mouseX < p.width && p.mouseY > 0 && p.mouseY < p.height;
   }
 };
 
-new p5(genreMapSketch, 'left-sketch-1');
+new p5(genreMapSketch, container_id);

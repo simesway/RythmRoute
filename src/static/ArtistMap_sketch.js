@@ -2,28 +2,39 @@ import ArtistMap from './ArtistMap.js';
 
 let artistMapSketch = (p) => {
   let artist_map;
-  p.setup = () => {
-    p.createCanvas(p.windowWidth * 2 / 3, p.windowHeight * 2/3);
-    p.background(60);
-    artist_map = new ArtistMap(p);
+  let canvas;
 
+  p.setup = () => {
+    const container = document.getElementById('artist-map');
+    const w = container.offsetWidth;
+    const h = container.offsetHeight;
+    canvas = p.createCanvas(w, h);
+    canvas.parent(container);
+    artist_map = new ArtistMap(p);
+    canvas.elt.oncontextmenu = () => false;
+    p.frameRate(10);
   };
 
   p.draw = () => {
-    p.background(120);
+    p.background("#838383");
 
     artist_map.draw();
-    p.strokeWeight(2);
-    p.stroke(0);
-    p.line(p.mouseX, p.mouseY, p.pmouseX, p.pmouseY);
+    p.noStroke()
+    p.fill(0);
+    p.textSize(16);
+    p.textAlign(p.LEFT, p.CENTER);
+    p.text("FPS: " + p.frameRate().toFixed(2), 10, 20);
   };
 
   p.windowResized = () => {
-    p.resizeCanvas(p.windowWidth * 2/3, p.windowHeight * 2/3);
+    const container = document.getElementById('artist-map');
+    const w = container.offsetWidth;
+    const h = container.offsetHeight;
+    p.resizeCanvas(w, h);
   };
 
   p.keyPressed = () => {
-    artist_map.keyPressed()
+    if (inCanvas()) artist_map.keyPressed();
   }
 
   function inCanvas(){
@@ -31,4 +42,4 @@ let artistMapSketch = (p) => {
   }
 };
 
-new p5(artistMapSketch, 'left-sketch-2');
+new p5(artistMapSketch, 'artist-map');
