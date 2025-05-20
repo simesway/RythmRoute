@@ -116,27 +116,27 @@ class GenreMap {
       this.p.circle(x, y, r+10)
     }
 
-    this.p.fill(180);
+    this.p.fill("#838383");
     this.p.noStroke();
 
     if (genre.isSelectable) {
-      this.p.fill(70);
+      this.p.fill("#cb9b96");
       if (this.genre_manager.isSelected(genre_id)) {
-        this.p.fill("#FF6500");
+        this.p.fill("#fe3e40");
       }
     }
 
     if (genre.hasSubgenre) {
-      this.p.strokeWeight(5);
-      this.p.stroke("#112233");
+      this.p.strokeWeight(4);
+      this.p.stroke("#a5bbc9");
       if (this.genre_manager.isExpanded(genre_id)) {
-        this.p.stroke("#016FB9");
+        this.p.stroke("#256686");
       }
     }
 
     this.p.circle(x, y, r);
 
-    this.p.strokeWeight(5);
+    this.p.strokeWeight(4);
     this.p.stroke(0)
     this.p.fill(255);
     this.p.textAlign(this.p.CENTER, this.p.CENTER);
@@ -213,6 +213,11 @@ class GenreMap {
     if (action) {
       this.session.updateOnServer({action: action, id: genre_id }, '/api/graph/update')
     }
+  }
+
+  windowResized(w, h) {
+    this.w = w - 2 * this.pad;
+    this.h = h - 2 * this.pad;
   }
 
   mouseMoved() {
