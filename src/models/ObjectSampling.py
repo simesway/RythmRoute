@@ -31,7 +31,7 @@ class AttributeFilter(Filter):
 
 
 class CombinedFilter(Filter):
-  filters: List[Filter]
+  filters: List[AttributeFilter]
 
   def apply(self, items: list):
     for f in self.filters:
@@ -109,8 +109,14 @@ class AttributeWeightedSampling(SamplingStrategy):
       random.seed(seed)
     return self.sample(items)
 
+SamplingStrategyType = Union[
+  RandomSampling,
+  WeightedSampling,
+  AttributeWeightedSampling
+]
+
 class WeightedCombinedSampler(SamplingStrategy):
-  samplers: List[SamplingStrategy]
+  samplers: List[SamplingStrategyType]
   weights: Optional[List[float]] = None
   n_samples: int = 1
 
@@ -118,14 +124,15 @@ class WeightedCombinedSampler(SamplingStrategy):
     if seed is not None:
       random.seed(seed)
     result = []
+
+    if not self.samplers:
+      return [RandomSampling().apply(items, seed) for i in range(0, self.n_samples)]
+
     for i in range(self.n_samples):
       sampler: SamplingStrategy = random.choices(self.samplers, weights=self.weights, k=1)[0]
       result.append(sampler.apply(items, seed))
     return result
 
-SamplingStrategyType = Union[
-  RandomSampling,
-  WeightedSampling,
-  AttributeWeightedSampling,
-  WeightedCombinedSampler
-]
+class SamplingConfig(BaseModel):
+  filter: CombinedFilter
+  sampler: WeightedCombinedSampler
