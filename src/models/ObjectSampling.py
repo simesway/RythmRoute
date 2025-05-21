@@ -82,14 +82,17 @@ class AttributeWeightedSampling(SamplingStrategy):
       return self.rank_based(items)
 
   def log(self, items):
-    weights = [math.log(getattr(item, self.attr) + 1e-6) for item in items]
-    weights = weights if self.higher_is_better else [1 / (v + 1e-6) for v in weights]
-    return random.choices(items, weights=weights, k=1)[0]
+    vals = [max(getattr(item, self.attr), 1e-6) for item in items]
+    logs = [math.log(v) for v in vals]
+    weights = [(w if self.higher_is_better else -w) ** self.alpha for w in logs]
+    return random.choices(items, weights=weights, k=1)[0] if sum(weights) > 0 else random.choice(items)
 
   def softmax(self, items):
     vals = np.array([getattr(item, self.attr) for item in items])
     vals = vals if self.higher_is_better else -vals
-    exp_vals = np.exp(vals - np.max(vals))  # for numerical stability
+    vals = (vals - np.min(vals)) / (np.ptp(vals) + 1e-8)  # scale to [0,1]
+    vals = self.alpha * vals  # sharpen differences
+    exp_vals = np.exp(vals - np.max(vals))  # stability
     weights = exp_vals / np.sum(exp_vals)
     return random.choices(items, weights=weights, k=1)[0]
 
