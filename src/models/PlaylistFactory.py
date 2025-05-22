@@ -2,7 +2,8 @@ from typing import Set, Dict, Optional, Literal, List
 from pydantic import BaseModel, Field
 
 from src.models.ArtistHandler import ArtistHandler
-from src.models.ObjectSampling import SamplingStrategyType, FilterTypes
+from src.models.ObjectSampling import SamplingStrategyType, FilterTypes, SamplingConfig, CombinedFilter, \
+  WeightedCombinedSampler
 from src.models.PlaylistEditor import PlaylistEditor
 from src.models.SongSampler import SongSamplerConfig, SAMPLERS
 from src.core.GenreGraph import GenreGraph
@@ -10,8 +11,8 @@ from src.core.SpotifyCache import Track
 
 
 class SampledArtists(BaseModel):
-  filter: Optional[FilterTypes] = None
-  sampler: Optional[SamplingStrategyType] = None
+  filter: Optional[CombinedFilter] = None
+  sampler: Optional[WeightedCombinedSampler] = None
   sampled: Set[int] = Field(default_factory=set)
 
 
@@ -88,29 +89,29 @@ class PlaylistFactory(BaseModel):
     elif mode == "tracks":
       self.genres[genre_id].tracks = None
 
-  def sample_artists(self, genre_id: int, sampler: SamplingStrategyType, filter_cls: Optional[FilterTypes] = None, limit: int=20, reset: bool=True):
+  def sample_artists(self, genre_id: int, config: SamplingConfig, limit: int=20, reset: bool=True):
     if genre_id not in self.genres:
       self.add_genre(genre_id)
 
     genre = self.genres[genre_id]
 
     if genre.artists is None:
-      genre.artists = SampledArtists(filter=filter_cls, sampler=sampler)
+      genre.artists = SampledArtists(filter=config.filter, sampler=config.sampler)
     else:
-      genre.artists.filter = filter_cls
-      genre.artists.sampler = sampler
+      genre.artists.filter = config.filter
+      genre.artists.sampler = config.sampler
 
     if reset:
       genre.artists.sampled.clear()
 
     pool = ArtistHandler().get_pool(genre_id)
-    artists = filter_cls(pool.artists) if filter_cls else pool.artists
+    artists = config.filter(pool.artists) if config.filter else pool.artists
 
     for _ in range(100):
       if len(genre.artists.sampled) >= limit:
         break
-      artist = sampler.apply(artists)
-      genre.artists.sampled.add(artist.id)
+      artist = config.sampler.apply(artists)
+      genre.artists.sampled.add(artist[0].id)
 
   def sampled_artists(self, genre_id: Optional[int] = None) -> Dict[int, list]:
     if genre_id and self.genres[genre_id].selected:

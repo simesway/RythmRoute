@@ -40,20 +40,18 @@ class GenreCard {
     card.id = this.key;
     card.innerHTML = `
       <h3>${this.genre.name}</h3>
-      <button onclick="genre_manager.toggleSelectGenre('${this.genre.id}')">Remove</button>
     `;
-    card.appendChild(this.attribute_selector())
-    card.appendChild(this.toggle_button('toggle-button', "higher_is_better", 'lower_is_better'))
-    card.appendChild(this.create_exp_slider(0.01, 100))
-    card.appendChild(this.sample_button())
+
     const artistSamplerSelection = document.createElement('div');
-    artistSamplerSelection.className = 'song-sampler-section';
+    artistSamplerSelection.className = 'artist-sampler-section';
     card.appendChild(artistSamplerSelection);
     this.initArtistSamplers(artistSamplerSelection);
+
     const songSamplerSection = document.createElement('div');
     songSamplerSection.className = 'song-sampler-section';
     card.appendChild(songSamplerSection);
     this.initSongSamplers(songSamplerSection);
+
     this.container.appendChild(card);
     return card;
   }
@@ -62,8 +60,10 @@ class GenreCard {
     const attributes = ["bouncyness", "organicness", "popularity"];
     attributes.forEach(attr => {
       const wrapper = document.createElement('div');
-      wrapper.className = 'attribute-wrapper';
-      wrapper.innerHTML = `
+      wrapper.className = 'strategy';
+
+
+      wrapper.innerHTML += `
         <label><input type="checkbox" class="enable-strategy" /> ${attr}</label>
         <input type="number" class="weight" placeholder="Weight" step="0.1" min="0" max="1" value="0.333"/>
       `;
@@ -104,30 +104,46 @@ class GenreCard {
       detailPanel.appendChild(maxLabel);
       detailPanel.appendChild(maxInput);
 
-
-      // Alpha slider
-      const alphaLabel = document.createElement('label');
-      alphaLabel.textContent = 'Alpha:';
-      const alphaInput = document.createElement('input');
-      alphaInput.type = 'range';
-      alphaInput.min = "0";
-      alphaInput.max = '100';
-      alphaInput.step = '0.01'
-      alphaInput.value = '0.5';
-      alphaInput.className = 'alpha-slider';
-
-      detailPanel.appendChild(alphaLabel);
-      detailPanel.appendChild(alphaInput);
+      const select = document.createElement("select");
+      select.className = "sampling-mode";
 
       // Prefer higher values
       const preferLabel = document.createElement('label');
       preferLabel.textContent = 'Prefer higher:';
       const preferCheckbox = document.createElement('input');
       preferCheckbox.type = 'checkbox';
-      preferCheckbox.className = 'prefer-higher';
+      preferCheckbox.className = 'higher-is-better';
 
       detailPanel.appendChild(preferLabel);
       detailPanel.appendChild(preferCheckbox);
+
+      // MODE
+      ["rank", "softmax", "log"].forEach((mode) => {
+        const option = document.createElement("option");
+        option.value = mode;
+        option.textContent = mode;
+        select.appendChild(option);
+      });
+      detailPanel.appendChild(select);
+
+
+      // Alpha slider
+      const alphaWrapper = document.createElement('div');
+      alphaWrapper.style.display = 'block';
+
+      const alphaLabel = document.createElement('label');
+      alphaLabel.textContent = 'Strength:';
+      const alphaInput = document.createElement('input');
+      alphaInput.type = 'range';
+      alphaInput.min = "0";
+      alphaInput.max = '100';
+      alphaInput.step = '0.01';
+      alphaInput.value = '0.5';
+      alphaInput.className = 'alpha-slider';
+
+      alphaWrapper.appendChild(alphaLabel);
+      alphaWrapper.appendChild(alphaInput);
+      detailPanel.appendChild(alphaWrapper);
 
       wrapper.querySelector('.enable-strategy').addEventListener('change', (e) => {
         detailPanel.style.display = e.target.checked ? 'grid' : 'none';
@@ -136,6 +152,68 @@ class GenreCard {
 
       container.appendChild(wrapper);
     })
+
+    const submitBtn = document.createElement('button');
+    submitBtn.innerText = "sample artists";
+    submitBtn.onclick = () => this.sendArtistSamplerConfig(container);
+    container.appendChild(submitBtn);
+  }
+
+  sendArtistSamplerConfig(container) {
+    const wrappers = container.querySelectorAll('.strategy');
+
+    const samplers = [];
+    const weights = [];
+    const filters = [];
+
+    wrappers.forEach(wrapper => {
+      const enabled = wrapper.querySelector('.enable-strategy').checked;
+      if (!enabled) return;
+
+      const attr = wrapper.textContent.trim().split('\n')[0].trim();
+      const weight = parseFloat(wrapper.querySelector('.weight').value);
+      weights.push(weight);
+
+      const min = parseFloat(wrapper.querySelector('.min-value').value);
+      const max = parseFloat(wrapper.querySelector('.max-value').value);
+      const mode = wrapper.querySelector('.sampling-mode').value;
+      const alphaSlider = wrapper.querySelector('.alpha-slider');
+      const alpha = Math.pow(10, (alphaSlider.value / 100) * Math.log10(100 / 0.01) + Math.log10(0.01));
+      const higher_is_better = wrapper.querySelector('.higher-is-better').value;
+
+      samplers.push({
+        type: "AttributeWeightedSampling",
+        attr: attr,
+        higher_is_better: higher_is_better,
+        alpha: alpha,
+        mode: mode
+      });
+
+      filters.push({
+        type: "AttributeFilter",
+        attr: attr,
+        min: min,
+        max: max
+      });
+    });
+
+    const samplerPayload = {
+      type: "WeightedCombinedSampler",
+      samplers: samplers,
+      weights: weights
+    };
+
+    const filterPayload = {
+      type: "CombinedFilter",
+      filters: filters
+    };
+
+    const payload = {
+      sampler: samplerPayload,
+      filter: filterPayload
+    };
+
+    this.session.updateOnServer(payload, `/api/sample/artists/${this.genre.id}`);
   }
 
   initSongSamplers(container) {
@@ -181,8 +259,8 @@ class GenreCard {
       {
         type: "nearest_release_date", label: "Nearest Release", details: (parent) => {
           parent.innerHTML = `
-            Target date: <input type="date" class="target-date" /><br>
-            Sigma days: <input type="number" class="sigma-days" min="0" max="100"/><br>
+            Target date: <input type="text" class="target-date" placeholder="YYYY or YYYY-MM or YYYY-MM-DD" /><br>
+            Sigma days: <input type="number" class="sigma-days" min="0" value="180"/><br>
             <label><input type="checkbox" class="core-only" checked /> Core only</label>
           `;
         }
@@ -215,11 +293,11 @@ class GenreCard {
 
     const submitBtn = document.createElement('button');
     submitBtn.innerText = "sample songs";
-    submitBtn.onclick = () => this.saveSamplerConfig(container);
+    submitBtn.onclick = () => this.sendSongSamplerConfig(container);
     container.appendChild(submitBtn);
   }
 
-  saveSamplerConfig(container) {
+  sendSongSamplerConfig(container) {
     const strategies = [];
 
     container.querySelectorAll('.strategy').forEach(s => {
@@ -253,7 +331,7 @@ class GenreCard {
         config.exclude_types = excludeTypes;
       }
 
-      strategies.push({ strategy: config, weight });
+      strategies.push({ strategy: config, weight: weight });
     });
     console.log("strategies", strategies);
     const payload = {
@@ -261,22 +339,7 @@ class GenreCard {
       sampler: { type: "combined", strategies }
     };
 
-    this.session.updateOnServer(payload, `/api/songs/sample/${this.genre.id}`);
-  }
-
-
-
-  attribute_selector() {
-    const selector = document.createElement('select');
-    selector.className = 'attr-selector'; // Add class for later selection
-    this.attr_types.forEach(type => {
-      const option = document.createElement('option');
-      option.value = type;
-      option.innerText = type;
-      if (this.filters.includes(type)) option.selected = true;
-      selector.appendChild(option);
-    });
-    return selector;
+    this.session.updateOnServer(payload, `/api/sample/tracks/${this.genre.id}`);
   }
 
   toggle_button(class_name, true_val, false_val) {
@@ -295,54 +358,6 @@ class GenreCard {
     };
 
     update();
-    return button;
-  }
-
-  create_exp_slider(minExp, maxExp) {
-    const container = document.createElement('div');
-
-    const valueDisplay = document.createElement('span');
-    valueDisplay.style.marginLeft = '10px';
-
-    const slider = document.createElement('input');
-    slider.className = "exp-slider";
-    slider.type = 'range';
-    slider.min = 0;
-    slider.max = 100;
-    slider.step = 1;
-
-    const expMap = x => Math.pow(10, (x / 100) * Math.log10(maxExp / minExp) + Math.log10(minExp));
-
-    const update = () => {
-      const expValue = expMap(Number(slider.value));
-      valueDisplay.innerText = expValue.toFixed(4);
-      slider.valueAsExp = expValue;
-    };
-
-    slider.oninput = update;
-    update();
-
-    container.appendChild(slider);
-    container.appendChild(valueDisplay);
-
-    return container;
-  }
-
-  sample_button() {
-    const button = document.createElement('button');
-    button.innerText = 'Sample';
-    button.onclick = () => {
-      const card = document.getElementById(this.key);
-      const selector = card.querySelector('.attr-selector');
-      const attr = selector.value;
-      const state = card.querySelector('.toggle-button');
-      const alpha = card.querySelector('.exp-slider');
-
-      this.session.updateOnServer(
-        {attr: attr, higher_is_better: state.value, alpha: alpha.valueAsExp},
-        `/api/artists/sample/${this.genre.id}`
-      );
-    };
     return button;
   }
 
