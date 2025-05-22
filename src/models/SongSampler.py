@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
 from src.core.SpotifyCache import Album, Track, SpotifyCache, Release
-from typing import Dict, List, Literal, Set, Union
+from typing import Dict, List, Literal, Set, Union, Annotated
 from collections import defaultdict
 from datetime import datetime
 import numpy as np
 import math
 import random
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator, Field
 
 NON_CORE_KEYWORDS = [
   "remix", "live", "deluxe", "instrumental",
@@ -49,31 +49,9 @@ class SongSampler(ABC):
   def sample_multiple_per_artist(self, artist_ids: List[str], num: int) -> Set[Track]:
     raise NotImplementedError
 
-class StrategyWeightPair(BaseModel):
-  strategy: 'SamplerConfigUnion'
-  weight: float
-
-class CombinedSamplerConfig(SongSamplerConfig):
-  type: str = "combined"
-  strategies: List[StrategyWeightPair]
-
-class CombinedSongSampler:
-  def __init__(self, config: CombinedSamplerConfig):
-    self.config = config
-
-  def sample(self, artist_ids: List[str], num: int) -> Set[Track]:
-    sampled_tracks = set()
-    total_weight = sum(strategy.weight for strategy in self.config.strategies)
-    for pair in self.config.strategies:
-      sampler_cls = SAMPLERS[pair.strategy.type]
-      sampler: SongSampler = sampler_cls(config=pair.strategy)
-      portion = round(num * (pair.weight / total_weight))
-      tracks = sampler.sample(artist_ids, portion)
-      sampled_tracks.update(tracks)
-    return sampled_tracks
 
 class TopSongsConfig(SongSamplerConfig):
-  type: str = "top_songs"
+  type: Literal["top_songs"]
 
 class TopSongsSampler(SongSampler):
   def sample_evenly_across_artists(self, artist_ids: List[str], num: int) -> Set[Track]:
@@ -112,7 +90,7 @@ class TopSongsSampler(SongSampler):
     return sampled_tracks
 
 class RandomReleaseConfig(SongSamplerConfig):
-  type: str = "random_release"
+  type: Literal["random_release"]
 
 class RandomReleaseSongSampler(SongSampler):
   def sample_evenly_across_artists(self, artist_ids: List[str], num: int) -> Set[Track]:
@@ -152,7 +130,7 @@ class RandomReleaseSongSampler(SongSampler):
     return sampled_tracks
 
 class AlbumClusterConfig(SongSamplerConfig):
-  type: str = "album_cluster"
+  type: Literal["album_cluster"]
   exclude_types: List[Literal["single", "compilation", "ep", "album"]] = []
   core_only: bool
 
@@ -199,7 +177,7 @@ class AlbumClusterSampler(SongSampler):
     return sampled_tracks
 
 class FullTrackPoolConfig(SongSamplerConfig):
-  type: str = "full_track_pool"
+  type: Literal["full_track_pool"]
   core_only: bool
 
 class FullTrackPoolSampler(SongSampler):
@@ -228,10 +206,21 @@ class FullTrackPoolSampler(SongSampler):
     return self.sample_from_full_track_pool(artist_ids, num=num)
 
 class NearestReleaseDateConfig(SongSamplerConfig):
-  type: str = "nearest_release_date"
+  type: Literal["nearest_release_date"]
   target_date: datetime
   sigma_days: float
   core_only: bool = True
+
+  @field_validator("target_date", mode="before")
+  def parse_partial_date(cls, v):
+    if isinstance(v, datetime):
+      return v
+    for fmt in ("%Y", "%Y-%m", "%Y-%m-%d"):
+      try:
+        return datetime.strptime(v, fmt)
+      except ValueError:
+        continue
+    raise ValueError("target_date must be in YYYY, YYYY-MM, or YYYY-MM-DD format")
 
 class NearestReleaseDateSampler(SongSampler):
   @staticmethod
@@ -283,6 +272,42 @@ class NearestReleaseDateSampler(SongSampler):
   def sample_evenly_across_artists(self, artist_ids: List[str], num: int) -> Set[Track]:
     return self.sample_by_target_release_date(artist_ids, num=num)
 
+
+
+SamplerConfigUnion = Annotated[
+  Union[
+    TopSongsConfig,
+    RandomReleaseConfig,
+    AlbumClusterConfig,
+    FullTrackPoolConfig,
+    NearestReleaseDateConfig
+  ],
+    Field(discriminator="type")
+]
+
+class StrategyWeightPair(BaseModel):
+  strategy: SamplerConfigUnion
+  weight: float
+
+class CombinedSamplerConfig(SongSamplerConfig):
+  type: Literal["combined"]
+  strategies: List[StrategyWeightPair] = []
+
+class CombinedSongSampler:
+  def __init__(self, config: CombinedSamplerConfig):
+    self.config = config
+
+  def sample(self, artist_ids: List[str], num: int) -> Set[Track]:
+    sampled_tracks = set()
+    total_weight = sum(strategy.weight for strategy in self.config.strategies)
+    for pair in self.config.strategies:
+      sampler_cls = SAMPLERS[pair.strategy.type]
+      sampler: SongSampler = sampler_cls(config=pair.strategy)
+      portion = round(num * (pair.weight / total_weight))
+      tracks = sampler.sample(artist_ids, portion)
+      sampled_tracks.update(tracks)
+    return sampled_tracks
+
 SAMPLERS = {
   "top_songs": TopSongsSampler,
   "random_release": RandomReleaseSongSampler,
@@ -291,11 +316,3 @@ SAMPLERS = {
   "nearest_release_date": NearestReleaseDateSampler,
   "combined": CombinedSongSampler
 }
-
-SamplerConfigUnion = Union[
-  TopSongsConfig,
-  RandomReleaseConfig,
-  AlbumClusterConfig,
-  FullTrackPoolConfig,
-  NearestReleaseDateConfig
-]
