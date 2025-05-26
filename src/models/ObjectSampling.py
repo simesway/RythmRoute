@@ -75,17 +75,18 @@ class AttributeWeightedSampling(SamplingStrategy):
 
   def sample(self, items):
     if self.mode == "log":
-      return self.log(items)
+      items, w = self.log(items)
     elif self.mode == "softmax":
-      return self.softmax(items)
+      items, w = self.softmax(items)
     else:
-      return self.rank_based(items)
+      items, w = self.rank_based(items)
+    return random.choices(items, weights=w, k=1)[0] if sum(w) > 0 else random.choice(items)
 
   def log(self, items):
     vals = [max(getattr(item, self.attr), 1e-6) for item in items]
     logs = [math.log(v) for v in vals]
     weights = [(w if self.higher_is_better else -w) ** self.alpha for w in logs]
-    return random.choices(items, weights=weights, k=1)[0] if sum(weights) > 0 else random.choice(items)
+    return items, weights
 
   def softmax(self, items):
     vals = np.array([getattr(item, self.attr) for item in items])
@@ -94,7 +95,7 @@ class AttributeWeightedSampling(SamplingStrategy):
     vals = self.alpha * vals  # sharpen differences
     exp_vals = np.exp(vals - np.max(vals))  # stability
     weights = exp_vals / np.sum(exp_vals)
-    return random.choices(items, weights=weights, k=1)[0]
+    return items, weights
 
   def rank_based(self, items):
     attr_values = np.array([getattr(item, self.attr) for item in items])
@@ -105,7 +106,7 @@ class AttributeWeightedSampling(SamplingStrategy):
 
     sorted_items = [items[i] for i in sorted_indices]
     weights = (np.arange(1, len(sorted_items) + 1) ** self.alpha).tolist()
-    return random.choices(sorted_items, weights=weights, k=1)[0]
+    return sorted_items, weights
 
   def apply(self, items: List[Any], seed: Optional[int] = None) -> Any:
     if seed is not None:
@@ -119,22 +120,53 @@ SamplingStrategyType = Union[
 ]
 
 class WeightedCombinedSampler(SamplingStrategy):
-  samplers: List[SamplingStrategyType]
+  samplers: List[AttributeWeightedSampling]
   weights: Optional[List[float]] = None
   n_samples: int = 1
 
-  def apply(self, items: List[Any], seed: Optional[int] = None) -> Any:
+  def apply(self, items: List[Any], seed: Optional[int] = None) -> List[Any]:
     if seed is not None:
       random.seed(seed)
-    result = []
 
-    if not self.samplers:
-      return [RandomSampling().apply(items, seed) for i in range(0, self.n_samples)]
+    n = len(items)
+    combined_weights = np.zeros(n)
 
-    for i in range(self.n_samples):
-      sampler: SamplingStrategy = random.choices(self.samplers, weights=self.weights, k=1)[0]
-      result.append(sampler.apply(items, seed))
-    return result
+    # Normalize sampler weights
+    sampler_weights = (
+      np.array(self.weights) / sum(self.weights)
+      if self.weights else np.ones(len(self.samplers)) / len(self.samplers)
+    )
+
+    for sampler, w in zip(self.samplers, sampler_weights):
+      if sampler.mode == "log":
+        _, weights = sampler.log(items)
+        indices = list(range(n))
+      elif sampler.mode == "softmax":
+        _, weights = sampler.softmax(items)
+        indices = list(range(n))
+      else:  # rank-based
+        sorted_attr = np.array([getattr(item, sampler.attr) for item in items])
+        sort_idx = np.argsort(sorted_attr)
+        if not sampler.higher_is_better:
+          sort_idx = sort_idx[::-1]
+        weights = (np.arange(1, n + 1) ** sampler.alpha).tolist()
+        indices = sort_idx.tolist()
+
+      weights = np.array(weights)
+      if np.sum(weights) > 0:
+        weights = weights / np.sum(weights)
+
+      # Map weights back to original item indices
+      temp_weights = np.zeros(n)
+      for idx, w_val in zip(indices, weights):
+        temp_weights[idx] = w_val
+
+      combined_weights += w * temp_weights
+
+    if np.sum(combined_weights) == 0:
+      return random.choices(items, k=self.n_samples)
+
+    return random.choices(items, weights=combined_weights, k=self.n_samples)
 
 class SamplingConfig(BaseModel):
   filter: CombinedFilter
