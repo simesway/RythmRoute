@@ -1,9 +1,7 @@
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
 from typing import List, Optional, Any, Union, Literal
-import math
 import numpy as np
-
 import random
 
 ### FILTERING
@@ -83,30 +81,30 @@ class AttributeWeightedSampling(SamplingStrategy):
     return random.choices(items, weights=w, k=1)[0] if sum(w) > 0 else random.choice(items)
 
   def log(self, items):
-    vals = [max(getattr(item, self.attr), 1e-6) for item in items]
-    logs = [math.log(v) for v in vals]
-    weights = [(w if self.higher_is_better else -w) ** self.alpha for w in logs]
-    return items, weights
+    vals = np.array([max(getattr(item, self.attr), 1e-6) for item in items])
+    logs = np.log(vals)
+    logs = logs if self.higher_is_better else -logs
+    weights = np.power(logs, self.alpha)
+    return items, weights.tolist()
 
   def softmax(self, items):
     vals = np.array([getattr(item, self.attr) for item in items])
     vals = vals if self.higher_is_better else -vals
     vals = (vals - np.min(vals)) / (np.ptp(vals) + 1e-8)  # scale to [0,1]
-    vals = self.alpha * vals  # sharpen differences
+    vals *= self.alpha # sharpen
     exp_vals = np.exp(vals - np.max(vals))  # stability
     weights = exp_vals / np.sum(exp_vals)
-    return items, weights
+    return items, weights.tolist()
 
   def rank_based(self, items):
     attr_values = np.array([getattr(item, self.attr) for item in items])
-    sorted_indices = np.argsort(attr_values)
-
+    sort_idx = np.argsort(attr_values)
     if not self.higher_is_better:
-      sorted_indices = sorted_indices[::-1]  # Reverse if needed
+      sort_idx = sort_idx[::-1]  # Reverse if needed
 
-    sorted_items = [items[i] for i in sorted_indices]
-    weights = (np.arange(1, len(sorted_items) + 1) ** self.alpha).tolist()
-    return sorted_items, weights
+    sorted_items = [items[i] for i in sort_idx]
+    weights = np.power(np.arange(1, len(items) + 1), self.alpha)
+    return sorted_items, weights.tolist()
 
   def apply(self, items: List[Any], seed: Optional[int] = None) -> Any:
     if seed is not None:
