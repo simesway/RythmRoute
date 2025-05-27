@@ -2,8 +2,7 @@ from typing import Set, Dict, Optional, Literal, List
 from pydantic import BaseModel, Field
 
 from src.models.ArtistHandler import ArtistHandler
-from src.models.ObjectSampling import SamplingStrategyType, FilterTypes, SamplingConfig, CombinedFilter, \
-  WeightedCombinedSampler
+from src.models.ObjectSampling import SamplingConfig, CombinedFilter, WeightedCombinedSampler
 from src.models.PlaylistEditor import PlaylistEditor
 from src.models.SongSampler import SongSamplerConfig, SAMPLERS
 from src.core.GenreGraph import GenreGraph
@@ -89,7 +88,7 @@ class PlaylistFactory(BaseModel):
     elif mode == "tracks":
       self.genres[genre_id].tracks = None
 
-  def sample_artists(self, genre_id: int, config: SamplingConfig, limit: int=20, reset: bool=True):
+  def sample_artists(self, genre_id: int, config: SamplingConfig, reset: bool=True):
     if genre_id not in self.genres:
       self.add_genre(genre_id)
 
@@ -108,7 +107,7 @@ class PlaylistFactory(BaseModel):
     artists = config.filter(pool.artists) if config.filter else pool.artists
 
     for _ in range(100):
-      if len(genre.artists.sampled) >= limit:
+      if len(genre.artists.sampled) >= config.limit:
         break
       artist = config.sampler.apply(artists)
       genre.artists.sampled.add(artist[0].id)

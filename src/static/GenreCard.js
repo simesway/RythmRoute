@@ -23,11 +23,11 @@ class Filter {
 class GenreCard {
   constructor(session, genre, element_id) {
     this.session = session;
+
     this.key = `genre:${genre.id}`
     this.genre = genre;
 
     this.filters = [];
-    this.attr_types = ["bouncyness", "organicness", "popularity"]
 
     this.container = document.getElementById(element_id);
     this.card = this.initial_card()
@@ -43,11 +43,15 @@ class GenreCard {
     `;
 
     const artistSamplerSelection = document.createElement('div');
+    artistSamplerSelection.style.border = '1px solid #ccc';
+    artistSamplerSelection.style.padding = "8px";
     artistSamplerSelection.className = 'artist-sampler-section';
     card.appendChild(artistSamplerSelection);
     this.initArtistSamplers(artistSamplerSelection);
 
     const songSamplerSection = document.createElement('div');
+    songSamplerSection.style.border = '1px solid #ccc';
+    songSamplerSection.style.padding = "8px";
     songSamplerSection.className = 'song-sampler-section';
     card.appendChild(songSamplerSection);
     this.initSongSamplers(songSamplerSection);
@@ -57,7 +61,26 @@ class GenreCard {
   }
 
   initArtistSamplers(container) {
+    const submitBtn = document.createElement('button');
+    submitBtn.style.width = "70%"
+    submitBtn.style.padding = "2px"
+    submitBtn.innerText = "sample artists";
+    submitBtn.onclick = () => this.sendArtistSamplerConfig(container);
+    container.appendChild(submitBtn);
+
+    const lInput = document.createElement('input');
+    lInput.type = 'number';
+    lInput.className = 'artist-limit';
+    lInput.value = '0';
+    lInput.min = "0";
+    lInput.style.padding = "0px"
+    lInput.style.margin = "2px"
+    lInput.style.width = '20%';
+    lInput.style.minWidth = '0';
+    container.appendChild(lInput);
+
     const attributes = ["bouncyness", "organicness", "popularity"];
+
     attributes.forEach(attr => {
       const wrapper = document.createElement('div');
       wrapper.className = 'strategy';
@@ -71,14 +94,14 @@ class GenreCard {
       const detailPanel = document.createElement('div');
       detailPanel.className = 'details';
       detailPanel.style.display = 'none';
-      detailPanel.style.gridTemplateColumns = 'auto 2fr';
+      detailPanel.style.gridTemplateColumns =  'repeat(4, max-content)';
       detailPanel.style.gap = '2px 4px';
       detailPanel.style.alignItems = 'left';
       detailPanel.style.padding = '10px';
 
       // Min input
       const minLabel = document.createElement('label');
-      minLabel.textContent = 'Min:';
+      minLabel.textContent = 'min:';
       const minInput = document.createElement('input');
       minInput.type = 'number';
       minInput.className = 'min-value';
@@ -86,13 +109,16 @@ class GenreCard {
       minInput.min = "0";
       minInput.max = attr === "popularity" ? '100' : '1';
       minInput.step = attr === "popularity" ? '1' : '0.001';
+      minInput.style.width = '4em';
+      minInput.style.minWidth = '0';
+      minInput.style.alignSelf = 'end';
 
       detailPanel.appendChild(minLabel);
       detailPanel.appendChild(minInput);
 
       // Max input
       const maxLabel = document.createElement('label');
-      maxLabel.textContent = 'Max:';
+      maxLabel.textContent = 'max:';
       const maxInput = document.createElement('input');
       maxInput.type = 'number';
       maxInput.className = 'max-value';
@@ -100,30 +126,39 @@ class GenreCard {
       maxInput.min = "0";
       maxInput.max = attr === "popularity" ? '100' : '1';
       maxInput.step = attr === "popularity" ? '1' : '0.001';
+      maxInput.style.width = '4em';
+      maxInput.style.minWidth = '0';
+      maxInput.style.alignSelf = 'end';
 
       detailPanel.appendChild(maxLabel);
       detailPanel.appendChild(maxInput);
 
-      const select = document.createElement("select");
-      select.className = "sampling-mode";
+      // higher is better
+      const toggleBtn = document.createElement("button");
+      let mode = "minimize";
+      toggleBtn.className = "higher-is-better"
+      toggleBtn.textContent = mode;
 
-      // Prefer higher values
-      const preferLabel = document.createElement('label');
-      preferLabel.textContent = 'Prefer higher:';
-      const preferCheckbox = document.createElement('input');
-      preferCheckbox.type = 'checkbox';
-      preferCheckbox.className = 'higher-is-better';
-
-      detailPanel.appendChild(preferLabel);
-      detailPanel.appendChild(preferCheckbox);
+      toggleBtn.addEventListener("click", () => {
+        mode = mode === "minimize" ? "maximize" : "minimize";
+        toggleBtn.textContent = mode;
+        toggleBtn.value = mode;
+      });
+      toggleBtn.style.gridColumn = 'span 2';
+      detailPanel.appendChild(toggleBtn);
 
       // MODE
+      const modeLabel = document.createElement('label');
+      modeLabel.textContent = 'mode:';
+      const select = document.createElement("select");
+      select.className = "sampling-mode";
       ["rank", "softmax", "log"].forEach((mode) => {
         const option = document.createElement("option");
         option.value = mode;
         option.textContent = mode;
         select.appendChild(option);
       });
+      detailPanel.appendChild(modeLabel);
       detailPanel.appendChild(select);
 
 
@@ -140,10 +175,12 @@ class GenreCard {
       alphaInput.step = '0.01';
       alphaInput.value = '0.5';
       alphaInput.className = 'alpha-slider';
+      alphaInput.style.gridColumn = '1 / -1';
+      alphaInput.style.height = 'auto';
+      alphaInput.style.minHeight = '0';
 
-      alphaWrapper.appendChild(alphaLabel);
-      alphaWrapper.appendChild(alphaInput);
-      detailPanel.appendChild(alphaWrapper);
+
+      detailPanel.appendChild(alphaInput);
 
       wrapper.querySelector('.enable-strategy').addEventListener('change', (e) => {
         detailPanel.style.display = e.target.checked ? 'grid' : 'none';
@@ -153,10 +190,15 @@ class GenreCard {
       container.appendChild(wrapper);
     })
 
-    const submitBtn = document.createElement('button');
-    submitBtn.innerText = "sample artists";
-    submitBtn.onclick = () => this.sendArtistSamplerConfig(container);
-    container.appendChild(submitBtn);
+    const artistList = document.createElement('div');
+    artistList.id = `${this.genre.id}-sampled-artists`
+    artistList.className = 'sampled-artists';
+    artistList.style.maxHeight = '8rem';
+    artistList.style.overflowY = 'auto';
+    artistList.style.border = '1px solid #ccc';
+    artistList.style.padding = '8px';
+
+    container.appendChild(artistList);
   }
 
   sendArtistSamplerConfig(container) {
@@ -179,7 +221,7 @@ class GenreCard {
       const mode = wrapper.querySelector('.sampling-mode').value;
       const alphaSlider = wrapper.querySelector('.alpha-slider');
       const alpha = Math.pow(10, (alphaSlider.value / 100) * Math.log10(100 / 0.01) + Math.log10(0.01));
-      const higher_is_better = wrapper.querySelector('.higher-is-better').value;
+      const higher_is_better = wrapper.querySelector('.higher-is-better').value === "maximize";
 
       samplers.push({
         type: "AttributeWeightedSampling",
@@ -208,15 +250,39 @@ class GenreCard {
       filters: filters
     };
 
+
+    const limit = container.querySelector('.artist-limit').value;
+
     const payload = {
+      limit: limit,
       sampler: samplerPayload,
       filter: filterPayload
     };
 
     this.session.updateOnServer(payload, `/api/sample/artists/${this.genre.id}`);
+    let factory = this.session.state.factory;
+    console.log(factory)
   }
 
   initSongSamplers(container) {
+    const submitBtn = document.createElement('button');
+    submitBtn.style.width = "70%"
+    submitBtn.style.padding = "2px"
+    submitBtn.innerText = "sample songs";
+    submitBtn.onclick = () => this.sendSongSamplerConfig(container);
+    container.appendChild(submitBtn);
+
+    const lInput = document.createElement('input');
+    lInput.type = 'number';
+    lInput.className = 'track-limit';
+    lInput.value = '0';
+    lInput.min = "0";
+    lInput.style.padding = "0px"
+    lInput.style.margin = "2px"
+    lInput.style.width = '20%';
+    lInput.style.minWidth = '0';
+    container.appendChild(lInput);
+
     const strategies = [
       { type: "top_songs", label: "Top Songs", details: null },
       { type: "random_release", label: "Random Release", details: null },
@@ -291,10 +357,15 @@ class GenreCard {
       container.appendChild(wrapper);
     });
 
-    const submitBtn = document.createElement('button');
-    submitBtn.innerText = "sample songs";
-    submitBtn.onclick = () => this.sendSongSamplerConfig(container);
-    container.appendChild(submitBtn);
+    const trackList = document.createElement('div');
+    trackList.id = `${this.genre.id}-sampled-tracks`
+    trackList.className = 'sampled-artists';
+    trackList.style.maxHeight = '8rem';
+    trackList.style.overflowY = 'auto';
+    trackList.style.border = '1px solid #ccc';
+    trackList.style.padding = '8px';
+
+    container.appendChild(trackList);
   }
 
   sendSongSamplerConfig(container) {
@@ -333,13 +404,32 @@ class GenreCard {
 
       strategies.push({ strategy: config, weight: weight });
     });
-    console.log("strategies", strategies);
+
+    const limit = container.querySelector(".track-limit").value;
+
     const payload = {
+      limit: limit,
       genre: this.genre.id,
       sampler: { type: "combined", strategies }
     };
 
     this.session.updateOnServer(payload, `/api/sample/tracks/${this.genre.id}`);
+    this.render_sampled_tracks()
+  }
+
+  render_sampled_tracks() {
+    const genre = this.session.state.factory.genres[this.genre.id]
+    const tracks = genre.tracks.sampled;
+
+    let sampled_panel = document.getElementById(`${this.genre.id}-sampled-tracks`);
+    sampled_panel.innerHTML = "";
+
+    tracks.sort((a, b) => a.name.localeCompare(b.name));
+    for (let track of tracks) {
+      const el = document.createElement("div");
+      el.textContent = track.name;
+      sampled_panel.appendChild(el);
+    }
   }
 
   toggle_button(class_name, true_val, false_val) {
@@ -362,7 +452,6 @@ class GenreCard {
   }
 
   destroy() {
-    console.log(this.card, this.container.contains(this.card));
     if (this.card && this.container.contains(this.card)) {
       const card = document.getElementById(this.key);
       if (card) card.remove();

@@ -169,3 +169,4 @@ class WeightedCombinedSampler(SamplingStrategy):
 class SamplingConfig(BaseModel):
   filter: CombinedFilter
   sampler: WeightedCombinedSampler
+  limit: Optional[int] = 10

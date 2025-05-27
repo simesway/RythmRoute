@@ -24,6 +24,6 @@ async def sample_artists(genre_id: int, request: Request, session: SessionData =
     if not sampler.strategies:
         sampler.strategies.append(StrategyWeightPair(strategy=RandomReleaseConfig(), weight=1))
 
-    session.factory.sample_tracks(genre_id, sampler)
+    session.factory.sample_tracks(genre_id, sampler, limit=int(data.get('limit', 10)))
     await store_session(session)
     return await create_SessionResponse(session)
