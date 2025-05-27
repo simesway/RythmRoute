@@ -51,7 +51,7 @@ class SongSampler(ABC):
 
 
 class TopSongsConfig(SongSamplerConfig):
-  type: Literal["top_songs"]
+  type: Literal["top_songs"] = "top_songs"
 
 class TopSongsSampler(SongSampler):
   def sample_evenly_across_artists(self, artist_ids: List[str], num: int) -> Set[Track]:
@@ -90,7 +90,7 @@ class TopSongsSampler(SongSampler):
     return sampled_tracks
 
 class RandomReleaseConfig(SongSamplerConfig):
-  type: Literal["random_release"]
+  type: Literal["random_release"] = "random_release"
 
 class RandomReleaseSongSampler(SongSampler):
   def sample_evenly_across_artists(self, artist_ids: List[str], num: int) -> Set[Track]:
@@ -130,7 +130,7 @@ class RandomReleaseSongSampler(SongSampler):
     return sampled_tracks
 
 class AlbumClusterConfig(SongSamplerConfig):
-  type: Literal["album_cluster"]
+  type: Literal["album_cluster"] = "album_cluster"
   exclude_types: List[Literal["single", "compilation", "ep", "album"]] = []
   core_only: bool
 
@@ -177,7 +177,7 @@ class AlbumClusterSampler(SongSampler):
     return sampled_tracks
 
 class FullTrackPoolConfig(SongSamplerConfig):
-  type: Literal["full_track_pool"]
+  type: Literal["full_track_pool"] = "full_track_pool"
   core_only: bool
 
 class FullTrackPoolSampler(SongSampler):
@@ -206,7 +206,7 @@ class FullTrackPoolSampler(SongSampler):
     return self.sample_from_full_track_pool(artist_ids, num=num)
 
 class NearestReleaseDateConfig(SongSamplerConfig):
-  type: Literal["nearest_release_date"]
+  type: Literal["nearest_release_date"] = "nearest_release_date"
   target_date: datetime
   sigma_days: float
   core_only: bool = True
