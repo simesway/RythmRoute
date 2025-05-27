@@ -3,6 +3,8 @@ from enum import Enum
 from pydantic import BaseModel
 from spotipy import SpotifyException
 from typing import List, Optional, Type, TypeVar
+import logging
+
 from src.core.redis_client import redis_sync
 from src.core.spotify_client import SpotifyClient
 
@@ -141,6 +143,7 @@ class SpotifyCache:
     if data:
       return Track.model_validate_json(data)
 
+    logging.info(f"Caching Track: {track_id}")
     track = self.spotify.track(track_id)
     data = self.converter.to_track(track)
     self.redis.setex(key, CacheConfig.SINGLE_OBJECT_TTL, data.model_dump_json())
@@ -153,6 +156,7 @@ class SpotifyCache:
     if data:
       return Album.model_validate_json(data)
 
+    logging.info(f"Caching Album: {album_id}")
     album = self.spotify.album(album_id)
     data = self.converter.to_album(album)
     self.redis.setex(key, CacheConfig.SINGLE_OBJECT_TTL, data.model_dump_json())
@@ -165,6 +169,7 @@ class SpotifyCache:
     if data:
       return Artist.model_validate_json(data)
 
+    logging.info(f"Caching Artist: {artist_id}")
     artist = self.spotify.artist(artist_id)
     data = self.converter.to_artist(artist)
     self.redis.setex(key, CacheConfig.SINGLE_OBJECT_TTL, data.model_dump_json())
@@ -177,6 +182,7 @@ class SpotifyCache:
     if data:
       return self.converter.deserialize(Track, data)
 
+    logging.info(f"Caching Top Tracks: {artist_id}")
     tracks = self.spotify.artist_top_tracks(artist_id)['tracks']
     data = [self.converter.to_track(t) for t in tracks]
     self.redis.setex(key, CacheConfig.TOP_TRACKS_TTL, self.converter.serialize(data))
@@ -189,6 +195,7 @@ class SpotifyCache:
     if data:
       return self.converter.deserialize(Album, data)
 
+    logging.info(f"Caching Releases: {artist_id}")
     albums = self.spotify.artist_albums(
       artist_id,
       include_groups='album,compilation,single,ep'
@@ -207,6 +214,7 @@ class SpotifyCache:
       tracks = self.spotify.album_tracks(album_id)['items']
     except SpotifyException:
       return []
+    logging.info(f"Caching Album Tracks: {album_id}")
     data = [self.converter.to_track(t, album_id) for t in tracks]
     self.redis.setex(key, CacheConfig.ALBUM_TRACKS_TTL, self.converter.serialize(data))
     return data
