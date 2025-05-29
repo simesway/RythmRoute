@@ -1,4 +1,5 @@
-from pydantic import BaseModel, PrivateAttr
+import logging
+from pydantic import BaseModel, PrivateAttr, Field
 from typing import List, Optional, Set, Union
 from spotipy import Spotify
 
@@ -10,20 +11,22 @@ class PlaylistEditor(BaseModel):
   name: Optional[str] = None
   description: Optional[str] = None
   public: bool = False
-  tracks: List[Track] = []
+  tracks: List[Track] = Field(default_factory=list)
 
   _spotify: Optional[Spotify] = PrivateAttr(default=None)
 
-  def set_spotify_client(self, sp: Spotify):
+  def set_spotify(self, sp: Spotify):
     self._spotify = sp
+    return self
 
-  def _check_session(self):
+  def _check_session(self, required_id: bool=True):
     if self._spotify is None:
-      raise ValueError("Spotify session not set or playlist already exists.")
+        raise ValueError("Spotify session not set.")
+    if required_id and self.id is None:
+        self.create()
 
   def create(self):
-    self._check_session()
-
+    self._check_session(required_id=False)
     response = self._spotify.user_playlist_create(
       user=self._spotify.current_user()["id"],
       name=self.name or "New Playlist",
@@ -31,21 +34,25 @@ class PlaylistEditor(BaseModel):
       public=self.public
     )
     self.id = response['id']
+    logging.info(f"Created Playlist: {self.id}")
 
   def add_tracks(self, tracks: Union[Set[Track], List[Track]]):
     if tracks is None:
       return
     self._check_session()
-    self._spotify.playlist_add_items(self.id, [t.id for t in tracks])
-    self.tracks.extend(tracks)
+    track_ids = [t.id for t in tracks]
+    if track_ids:
+      self._spotify.playlist_add_items(self.id, [t.id for t in tracks])
+      self.tracks.extend(tracks)
 
   def remove_tracks(self, tracks: Union[Set[Track], List[Track]]):
     if len(tracks) == 0:
       return
     self._check_session()
     track_ids = [t.id for t in tracks]
-    self._spotify.playlist_remove_all_occurrences_of_items(self.id, track_ids)
-    self.tracks = [t for t in self.tracks if t.id not in track_ids]
+    if track_ids:
+      self._spotify.playlist_remove_all_occurrences_of_items(self.id, track_ids)
+      self.tracks = [t for t in self.tracks if t.id not in track_ids]
 
   def update_details(self, name: Optional[str] = None, description: Optional[str] = None, public: Optional[bool] = None):
     self._check_session()
@@ -60,12 +67,13 @@ class PlaylistEditor(BaseModel):
     self.public = public or self.public
 
   def to_frontend(self):
+    cache = SpotifyCache()
     album_ids = set(t.album_id for t in self.tracks)
     artist_ids = set(artist_id for t in self.tracks for artist_id in t.artist_ids)
     return {
       "name": self.name,
       "description": self.description,
       "tracks": self.tracks,
-      "albums": {album_id: SpotifyCache().get_album(album_id) for album_id in album_ids},
-      "artists": {artist_id: SpotifyCache().get_artist(artist_id) for artist_id in artist_ids}
+      "albums": {album_id: cache.get_album(album_id) for album_id in album_ids},
+      "artists": {artist_id: cache.get_artist(artist_id) for artist_id in artist_ids}
     }
