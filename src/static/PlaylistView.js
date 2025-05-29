@@ -2,43 +2,67 @@ class PlaylistManager {
   constructor(session) {
     this.session = session;
     this.container = document.getElementById("playlist-container");
-    this.trackList = document.createElement('ul');
-    this.container.appendChild(this.createPlaylistUI());
-    this.container.appendChild(this.trackList);
     this.artistPanel = document.getElementById("artist-panel");
     this.albumPanel = document.getElementById("album-panel");
+        this.trackList = document.createElement('ul');
+    this.container.appendChild(this.trackList);
     this.current_state();
   }
 
-  createPlaylistUI() {
+  createPlaylistUI(data) {
     const wrapper = document.createElement('div');
 
-    const nameInput = document.createElement('input');
-    nameInput.className = "playlist-name";
-    nameInput.placeholder = "Playlist name";
+    if (!data) {
+      const nameInput = document.createElement('input');
+      nameInput.className = "playlist-name";
+      nameInput.placeholder = "Playlist name";
+      wrapper.appendChild(nameInput);
 
-    const trackCountInput = document.createElement('input');
-    trackCountInput.className = "playlist-tracks";
-    trackCountInput.placeholder = "Number of tracks";
-    trackCountInput.type = "number";
-    trackCountInput.value = "10";
+      const trackCountInput = document.createElement('input');
+      trackCountInput.className = "playlist-tracks";
+      trackCountInput.placeholder = "Number of tracks";
+      trackCountInput.type = "number";
+      trackCountInput.value = "10";
+      wrapper.appendChild(trackCountInput);
 
-    const createButton = document.createElement('button');
-    createButton.textContent = "Create";
-    createButton.onclick = async () => {
-      const res = await fetch('/api/playlist/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: nameInput.value, length: Number(trackCountInput.value) })
-      });
-      const playlist_data = await res.json();
-      this.render(playlist_data);
-    };
+      const createButton = document.createElement('button');
+      createButton.textContent = "create";
+      createButton.onclick = async () => {
+        const res = await fetch('/api/playlist/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: nameInput.value, length: Number(trackCountInput.value) })
+        });
+        const playlist_data = await res.json();
+        this.render(playlist_data);
+      };
 
-    wrapper.appendChild(nameInput);
-    wrapper.appendChild(trackCountInput);
-    wrapper.appendChild(createButton);
+      wrapper.appendChild(createButton);
+    } else {
+      const playlistName = document.createElement('h1');
+      playlistName.className = "playlist-name";
+      playlistName.innerText = data.name;
+      wrapper.appendChild(playlistName);
 
+      const desc = document.createElement("p");
+      desc.textContent = data.description;
+      wrapper.appendChild(desc);
+
+      const updateButton = document.createElement('button');
+      updateButton.textContent = "update";
+      updateButton.onclick = async () => {
+        const res = await fetch('/api/playlist/update', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const playlist_data = await res.json();
+        this.render(playlist_data);
+      };
+
+      wrapper.appendChild(updateButton);
+    }
+
+    this.container.appendChild(wrapper);
     return wrapper;
   }
 
@@ -57,22 +81,16 @@ class PlaylistManager {
   }
 
   render(data) {
+    this.container.innerHTML = "";
     this.data = data;
 
-    if (!data) {
-      this.createPlaylistUI();
-    }
 
-    let {name, description, tracks, albums, artists} = data;
-    this.container.innerHTML = "";
+    const ui = this.createPlaylistUI(data);
+    this.container.appendChild(ui);
 
-    const header = document.createElement("h2");
-    header.textContent = name;
-    this.container.appendChild(header);
+    if (!data || !data.tracks) return;
 
-    const desc = document.createElement("p");
-    desc.textContent = description;
-    this.container.appendChild(desc);
+    let {tracks, albums, artists} = data;
 
     const trackList = document.createElement("div");
     trackList.style.display = "flex";

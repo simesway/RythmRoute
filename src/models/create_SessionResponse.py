@@ -36,4 +36,4 @@ async def create_SessionResponse(session: SessionData) -> SessionResponse:
       pools.append(pool)
     artist_data = ArtistMapData(pools=pools, sampled=f.sampled_artists() or {})
 
-  return SessionResponse(genre_data=genre_data, graph=genre_graph_data, artists=artist_data)
+  return SessionResponse(genre_data=genre_data, graph=genre_graph_data, artists=artist_data, factory=f)

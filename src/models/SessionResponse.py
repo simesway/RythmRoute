@@ -3,6 +3,8 @@ from pydantic import BaseModel
 from typing import Optional, Dict, List
 
 from src.models.ArtistHandler import ArtistPool
+from src.models.PlaylistFactory import PlaylistFactory
+
 
 class GenreRelationship(BaseModel):
   source: int
@@ -42,3 +44,4 @@ class SessionResponse(BaseModel):
   genre_data: GenreData = GenreData()
   graph: Optional[GenreGraphData] = None
   artists: Optional[ArtistMapData] = None
+  factory: Optional[PlaylistFactory] = None

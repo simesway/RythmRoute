@@ -1,3 +1,5 @@
+import logging
+from spotipy import Spotify
 from typing import Set, Dict, Optional, Literal, List
 from pydantic import BaseModel, Field
 
@@ -31,7 +33,7 @@ class UserGenre(BaseModel):
 
 class PlaylistFactory(BaseModel):
   genres: Dict[int, UserGenre] = Field(default_factory=dict)
-  playlist: PlaylistEditor = Field(default_factory=PlaylistEditor)
+  playlist: Optional[PlaylistEditor] = None
 
   def selected_genres(self) -> List[int]:
     return [g.id for g in self.genres.values() if g.selected]
@@ -89,6 +91,7 @@ class PlaylistFactory(BaseModel):
       self.genres[genre_id].tracks = None
 
   def sample_artists(self, genre_id: int, config: SamplingConfig, reset: bool=True):
+    logging.info(f"Sampling Artists: {genre_id}")
     if genre_id not in self.genres:
       self.add_genre(genre_id)
 
@@ -118,6 +121,7 @@ class PlaylistFactory(BaseModel):
     return {genre.id: list(genre.artists.sampled) for genre in self.genres.values() if genre.selected and genre.artists}
 
   def sample_tracks(self, genre_id: int, sampler_config: SongSamplerConfig, limit: int=20, reset: bool=True):
+    logging.info(f"Sampling Tracks: {genre_id}")
     genre: UserGenre = self.genres[genre_id]
 
     if genre.tracks is None:
@@ -141,6 +145,13 @@ class PlaylistFactory(BaseModel):
       return set(track for track in self.genres[genre_id].tracks.sampled)
     return set(track for genre in sampled_genres for track in genre.tracks.sampled)
 
+  def create_playlist(self, sp: Spotify, name: str):
+    if isinstance(self.playlist, PlaylistEditor) and self.playlist.id:
+      return
+    playlist = PlaylistEditor(name=name).set_spotify(sp)
+    playlist.create()
+    self.playlist = playlist
+
   def rebuild_playlist(self):
     trackset = set(self.playlist.tracks)
     sampled_tracks = self.sampled_tracks()
@@ -152,5 +163,6 @@ class PlaylistFactory(BaseModel):
     pass # TODO
 
   def update_playlist(self):
+    logging.info(f"Updating Playlist: {self.playlist.id}")
     self.rebuild_playlist()
     self.reorder_playlist()

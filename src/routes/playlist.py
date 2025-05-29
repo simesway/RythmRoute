@@ -18,31 +18,30 @@ async def create_playlist(request: Request, session: SessionData = Depends(get_s
   if data["name"] == "":
     return {}
 
-  print(session.playlist)
-  if not session.playlist:
-    playlist = PlaylistEditor(name=data["name"])
-    playlist.set_spotify_client(sp)
-    playlist.create()
-    session.playlist = playlist
-    await store_session(session)
-  else:
-    playlist = session.playlist
-    playlist.set_spotify_client(sp)
+  factory = session.factory
+  if not isinstance(factory.playlist, PlaylistEditor) or factory.playlist.id is None:
+    factory.create_playlist(sp, data["name"])
 
-  for g_id in session.factory.selected_genres():
-    session.factory.sample_tracks(g_id, TopSongsConfig(), limit=data["length"])
-  tracks = session.factory.sampled_tracks()
+  factory.playlist.set_spotify(sp)
+  factory.update_playlist()
 
-  playlist.add_tracks(list(tracks))
-
-  session.playlist = playlist
   await store_session(session)
 
-  return playlist.to_frontend()
+  return factory.playlist.to_frontend()
+
+
+@router.get("/update")
+async def update_playlist(session: SessionData = Depends(get_session)):
+  sp = SpotifyUserClient.get_spotify_client(session.id)
+  factory = session.factory
+  factory.playlist.set_spotify(sp)
+  factory.update_playlist()
+  await store_session(session)
+  return factory.playlist.to_frontend()
 
 @router.get("/current")
 async def get_current_playlist(session: SessionData = Depends(get_session)):
-  return session.playlist.to_frontend() if session.playlist else None
+  return session.factory.playlist.to_frontend() if session.factory.playlist else None
 
 
 
