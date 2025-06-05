@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from src.core.SpotifyCache import Album, Track, SpotifyCache, Release
+from src.core.SpotifyCache import Album, Track, SpotifyCache, Release, AlbumType
 from typing import Dict, List, Literal, Set, Union, Annotated
 from collections import defaultdict
 from datetime import datetime
@@ -131,7 +131,7 @@ class RandomReleaseSongSampler(SongSampler):
 
 class AlbumClusterConfig(SongSamplerConfig):
   type: Literal["album_cluster"] = "album_cluster"
-  exclude_types: List[Literal["single", "compilation", "ep", "album"]] = []
+  exclude_types: List[AlbumType] = []
   core_only: bool
 
 class AlbumClusterSampler(SongSampler):

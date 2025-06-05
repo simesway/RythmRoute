@@ -1,8 +1,7 @@
 import json
-from enum import Enum
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from spotipy import SpotifyException
-from typing import List, Optional, Type
+from typing import List, Literal, Optional, Type
 import logging
 
 from src.core.redis_client import redis_sync
@@ -18,11 +17,7 @@ class CacheConfig:
   MAX_ARTIST_BATCH = 50 # limit by spotify web api
 
 
-class AlbumType(Enum):
-  ALBUM = 'album'
-  COMPILATION = 'compilation'
-  EP = 'ep'
-  SINGLE = 'single'
+AlbumType = Literal['album', 'compilation', 'ep', 'single']
 
 
 class SpotifyModel(BaseModel):
@@ -46,14 +41,14 @@ class ImageObject(BaseModel):
 
 
 class Release(SpotifyModel):
-  artist_ids: List[str] = []
+  artist_ids: List[str] =  Field(default_factory=list)
 
 
 class Album(Release):
   type: AlbumType
   release_date: str
   total_tracks: int
-  images: List[ImageObject] = []
+  images: List[ImageObject] = Field(default_factory=list)
   popularity: Optional[int]
 
   class Config:
@@ -76,12 +71,12 @@ class Track(Release):
 
 class Artist(SpotifyModel):
   popularity: Optional[int]
-  genres: List[str] = []
-  images: List[ImageObject] = []
+  genres: List[str] = Field(default_factory=list)
+  images: List[ImageObject] = Field(default_factory=list)
 
 
 class SpotifyUser(SpotifyModel):
-  images: List[ImageObject] = []
+  images: List[ImageObject] = Field(default_factory=list)
 
 
 class DataConverter:
@@ -213,13 +208,12 @@ class SpotifyCache:
 
     for artist_id, data in zip(album_ids, cached_data):
       if data:
-        results.append(Artist.model_validate_json(data))
+        results.append(Album.model_validate_json(data))
       else:
         uncached_ids.append(artist_id)
 
     for i in range(0, len(uncached_ids), CacheConfig.MAX_ALBUM_BATCH):
       batch = uncached_ids[i:i+CacheConfig.MAX_ALBUM_BATCH]
-      print("batch_size:", len(batch))
       logging.info(f"Caching Album Batch: {batch}")
       try:
         fetched = self.spotify.albums(batch)['albums']
