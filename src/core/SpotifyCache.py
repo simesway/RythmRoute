@@ -6,7 +6,7 @@ from typing import List, Optional, Type
 import logging
 
 from src.core.redis_client import redis_sync
-from src.core.spotify_client import SpotifyClient
+from src.core.spotify_client import SpotifyClient, SpotifyUserClient
 
 
 class CacheConfig:
@@ -80,6 +80,10 @@ class Artist(SpotifyModel):
   images: List[ImageObject] = []
 
 
+class SpotifyUser(SpotifyModel):
+  images: List[ImageObject] = []
+
+
 class DataConverter:
   @staticmethod
   def to_image_objects(images: List[dict]) -> List[ImageObject]:
@@ -124,6 +128,14 @@ class DataConverter:
     )
 
   @staticmethod
+  def to_user(user_data: dict) -> SpotifyUser:
+    return SpotifyUser(
+      id=user_data['id'],
+      name=user_data['display_name'] or "",
+      images=DataConverter.to_image_objects(user_data['images'])
+    )
+
+  @staticmethod
   def serialize(items: List[BaseModel]) -> str:
     return json.dumps([item.model_dump() for item in items])
 
@@ -137,6 +149,21 @@ class SpotifyCache:
     self.redis = redis_sync
     self.spotify = SpotifyClient().get_spotify_client()
     self.converter = DataConverter()
+
+  def get_current_user(self, session_id: str) -> Optional[SpotifyUser]:
+    key = f"spotify:user:{session_id}"
+    data = self.redis.get(key)
+
+    if data:
+      return SpotifyUser.model_validate_json(data)
+
+    sp = SpotifyUserClient().get_spotify_client(session_id)
+    if sp is None:
+      return None
+    logging.info("Caching Spotify User")
+    data = self.converter.to_user(sp.me())
+    self.redis.setex(key, CacheConfig.SINGLE_OBJECT_TTL, data.model_dump_json())
+    return data
 
   def get_track(self, track_id: str) -> Track:
     key = f"track:{track_id}"
