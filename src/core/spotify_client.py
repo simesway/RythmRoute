@@ -70,7 +70,7 @@ class SpotifyUserClient:
         cache_handler.save_token_to_cache(token_info)
       return spotipy.Spotify(auth=token_info['access_token'])
 
-    raise Exception("No token available. User needs to log in.")
+    return None
 
   @staticmethod
   def get_auth_url(user_id):
