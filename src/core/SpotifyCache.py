@@ -2,7 +2,7 @@ import json
 from enum import Enum
 from pydantic import BaseModel
 from spotipy import SpotifyException
-from typing import List, Optional, Type, TypeVar
+from typing import List, Optional, Type
 import logging
 
 from src.core.redis_client import redis_sync
@@ -14,6 +14,8 @@ class CacheConfig:
   TOP_TRACKS_TTL = 86400
   ALBUMS_TTL = 86400
   ALBUM_TRACKS_TTL = 86400
+  MAX_ALBUM_BATCH = 20 # limit by spotify web api
+  MAX_ARTIST_BATCH = 50 # limit by spotify web api
 
 
 class AlbumType(Enum):
@@ -174,6 +176,61 @@ class SpotifyCache:
     data = self.converter.to_artist(artist)
     self.redis.setex(key, CacheConfig.SINGLE_OBJECT_TTL, data.model_dump_json())
     return data
+
+  def get_albums(self, album_ids: List[str]) -> List[Album]:
+    keys = [f"album:{aid}" for aid in album_ids]
+    cached_data = self.redis.mget(keys)
+
+    results = []
+    uncached_ids = []
+
+    for artist_id, data in zip(album_ids, cached_data):
+      if data:
+        results.append(Artist.model_validate_json(data))
+      else:
+        uncached_ids.append(artist_id)
+
+    for i in range(0, len(uncached_ids), CacheConfig.MAX_ALBUM_BATCH):
+      batch = uncached_ids[i:i+CacheConfig.MAX_ALBUM_BATCH]
+      print("batch_size:", len(batch))
+      logging.info(f"Caching Album Batch: {batch}")
+      try:
+        fetched = self.spotify.albums(batch)['albums']
+        converted = [self.converter.to_album(a) for a in fetched]
+        for album in converted:
+          self.redis.setex(f"album:{album.id}", CacheConfig.SINGLE_OBJECT_TTL, album.model_dump_json())
+        results.extend(converted)
+      except SpotifyException:
+        continue
+
+    return results
+
+  def get_artists(self, artist_ids: List[str]) -> List[Artist]:
+    keys = [f"artist:{aid}" for aid in artist_ids]
+    cached_data = self.redis.mget(keys)
+
+    results = []
+    uncached_ids = []
+
+    for artist_id, data in zip(artist_ids, cached_data):
+      if data:
+        results.append(Artist.model_validate_json(data))
+      else:
+        uncached_ids.append(artist_id)
+
+    for i in range(0, len(uncached_ids), CacheConfig.MAX_ARTIST_BATCH):
+      batch = uncached_ids[i:i+CacheConfig.MAX_ARTIST_BATCH]
+      logging.info(f"Caching Artist Batch: {batch}")
+      try:
+        fetched = self.spotify.artists(batch)['artists']
+        converted = [self.converter.to_artist(a) for a in fetched]
+        for artist in converted:
+          self.redis.setex(f"artist:{artist.id}", CacheConfig.SINGLE_OBJECT_TTL, artist.model_dump_json())
+        results.extend(converted)
+      except SpotifyException:
+        continue
+
+    return results
 
   def get_top_tracks(self, artist_id: str) -> List[Track]:
     key = f"artist:top_tracks:{artist_id}"
