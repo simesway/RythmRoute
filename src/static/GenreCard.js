@@ -239,10 +239,13 @@ class GenreCard {
       });
     });
 
+    const limit = container.querySelector('.artist-limit').value;
+
     const samplerPayload = {
       type: "WeightedCombinedSampler",
       samplers: samplers,
-      weights: weights
+      weights: weights,
+      n_samples: limit
     };
 
     const filterPayload = {
@@ -250,18 +253,12 @@ class GenreCard {
       filters: filters
     };
 
-
-    const limit = container.querySelector('.artist-limit').value;
-
     const payload = {
-      limit: limit,
       sampler: samplerPayload,
       filter: filterPayload
     };
 
     this.session.updateOnServer(payload, `/api/sample/artists/${this.genre.id}`);
-    let factory = this.session.state.factory;
-    console.log(factory)
   }
 
   initSongSamplers(container) {

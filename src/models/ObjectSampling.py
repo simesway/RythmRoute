@@ -169,7 +169,7 @@ class WeightedCombinedSampler(SamplingStrategy):
       indices = np.random.choice(len(items), size=n, replace=False, p=probs)
       return [items[i] for i in indices]
 
+
 class SamplingConfig(BaseModel):
   filter: CombinedFilter
   sampler: WeightedCombinedSampler
-  limit: Optional[int] = 10
