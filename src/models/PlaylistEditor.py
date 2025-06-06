@@ -74,6 +74,6 @@ class PlaylistEditor(BaseModel):
       "name": self.name,
       "description": self.description,
       "tracks": self.tracks,
-      "albums": {album_id: cache.get_album(album_id) for album_id in album_ids},
-      "artists": {artist_id: cache.get_artist(artist_id) for artist_id in artist_ids}
+      "albums": {a.id: a for a in cache.get_albums(list(album_ids))},
+      "artists": {a.id: a for a in cache.get_artists(list(artist_ids))}
     }

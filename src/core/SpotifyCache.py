@@ -206,11 +206,11 @@ class SpotifyCache:
     results = []
     uncached_ids = []
 
-    for artist_id, data in zip(album_ids, cached_data):
+    for album_id, data in zip(album_ids, cached_data):
       if data:
         results.append(Album.model_validate_json(data))
       else:
-        uncached_ids.append(artist_id)
+        uncached_ids.append(album_id)
 
     for i in range(0, len(uncached_ids), CacheConfig.MAX_ALBUM_BATCH):
       batch = uncached_ids[i:i+CacheConfig.MAX_ALBUM_BATCH]

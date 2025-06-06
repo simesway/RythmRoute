@@ -4,7 +4,7 @@ from typing import Set, Dict, Optional, Literal, List
 from pydantic import BaseModel, Field
 
 from src.models.ArtistHandler import ArtistHandler
-from src.models.ObjectSampling import SamplingConfig, CombinedFilter, WeightedCombinedSampler
+from src.models.ObjectSampling import SamplingConfig, CombinedFilter, WeightedCombinedSampler, AttributeFilter
 from src.models.PlaylistEditor import PlaylistEditor
 from src.models.SongSampler import SongSamplerConfig, SAMPLERS
 from src.core.GenreGraph import GenreGraph
@@ -12,7 +12,7 @@ from src.core.SpotifyCache import Track
 
 
 class SampledArtists(BaseModel):
-  filter: Optional[CombinedFilter] = None
+  filters: Optional[List[AttributeFilter]] = None
   sampler: Optional[WeightedCombinedSampler] = None
   sampled: Set[int] = Field(default_factory=set)
 
@@ -98,16 +98,16 @@ class PlaylistFactory(BaseModel):
     genre = self.genres[genre_id]
 
     if genre.artists is None:
-      genre.artists = SampledArtists(filter=config.filter, sampler=config.sampler)
+      genre.artists = SampledArtists(filters=config.filters, sampler=config.sampler)
     else:
-      genre.artists.filter = config.filter
+      genre.artists.filters = config.filters
       genre.artists.sampler = config.sampler
 
     if reset:
       genre.artists.sampled.clear()
 
     pool = ArtistHandler().get_pool(genre_id)
-    artists = config.filter(pool.artists) if config.filter.filters else pool.artists
+    artists = CombinedFilter(filters=config.filters)(pool.artists) if config.filters else pool.artists
 
     artist_ids = set(a.id for a in config.sampler.apply(artists))
     genre.artists.sampled.update(artist_ids)
