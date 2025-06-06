@@ -2,6 +2,7 @@ from dataclasses import field
 from pydantic import BaseModel
 from typing import Optional, Dict, List
 
+from src.core.SpotifyCache import SpotifyUser
 from src.models.ArtistHandler import ArtistPool
 from src.models.PlaylistFactory import PlaylistFactory
 
@@ -45,3 +46,4 @@ class SessionResponse(BaseModel):
   graph: Optional[GenreGraphData] = None
   artists: Optional[ArtistMapData] = None
   factory: Optional[PlaylistFactory] = None
+  user: Optional[SpotifyUser] = None

@@ -4,6 +4,7 @@ class SessionModel {
     this.graph = data.graph ?? null;
     this.artists = data.artists ?? null;
     this.factory = data.factory ?? null;
+    this.user = data.user ?? null;
   }
 }
 

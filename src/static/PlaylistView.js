@@ -4,64 +4,114 @@ class PlaylistManager {
     this.container = document.getElementById("playlist-container");
     this.artistPanel = document.getElementById("artist-panel");
     this.albumPanel = document.getElementById("album-panel");
-        this.trackList = document.createElement('ul');
+    this.trackList = document.createElement('ul');
     this.container.appendChild(this.trackList);
+    this.user = null;
     this.current_state();
+  }
+
+  loginUI(container){
+    const msg = document.createElement("p");
+    msg.innerText = "Please log in to create or view your playlist.";
+    container.appendChild(msg);
+
+    const loginButton = document.createElement("button");
+    loginButton.textContent = "Login";
+    loginButton.onclick = () => {
+      window.location.href = "/spotify/login";
+    };
+    container.appendChild(loginButton);
+  }
+
+  displayUser(container){
+    const userInfo = document.createElement("div");
+    userInfo.className = "user-info";
+    userInfo.style.display = "flex";
+    userInfo.style.alignItems = "center";
+    userInfo.style.gap = "12px";
+    userInfo.style.padding = "20px";
+
+    if (this.user?.images?.length > 0) {
+      const img = document.createElement("img");
+      img.src = this.user.images[0].url;
+      img.alt = "User profile";
+      img.width = 50;
+      img.height = 50;
+      img.style.borderRadius = "50%";
+      userInfo.appendChild(img);
+    }
+
+    const name = document.createElement("span");
+    name.textContent = this.user.name;
+    name.style.fontSize = "1.2em";
+    userInfo.appendChild(name);
+
+    container.appendChild(userInfo);
+  }
+
+  displayPlaylist(container, data) {
+    const playlistName = document.createElement('h1');
+    playlistName.className = "playlist-name";
+    playlistName.innerText = data.name;
+    container.appendChild(playlistName);
+
+    const desc = document.createElement("p");
+    desc.textContent = data.description;
+    container.appendChild(desc);
+
+    const updateButton = document.createElement('button');
+    updateButton.textContent = "update";
+    updateButton.onclick = async () => {
+      const res = await fetch('/api/playlist/update', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const playlist_data = await res.json();
+      this.render(playlist_data);
+    };
+
+    container.appendChild(updateButton);
+  }
+
+  createPlaylist(container){
+    const nameInput = document.createElement('input');
+    nameInput.className = "playlist-name";
+    nameInput.placeholder = "Playlist name";
+    container.appendChild(nameInput);
+
+    const createButton = document.createElement('button');
+    createButton.textContent = "create playlist";
+    createButton.onclick = async () => {
+      const res = await fetch('/api/playlist/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: nameInput.value})
+      });
+      const playlist_data = await res.json();
+      this.render(playlist_data);
+    };
+
+    container.appendChild(createButton);
   }
 
   createPlaylistUI(data) {
     const wrapper = document.createElement('div');
+    const user = document.createElement('div');
+    const playlist = document.createElement('div');
 
-    if (!data) {
-      const nameInput = document.createElement('input');
-      nameInput.className = "playlist-name";
-      nameInput.placeholder = "Playlist name";
-      wrapper.appendChild(nameInput);
-
-      const trackCountInput = document.createElement('input');
-      trackCountInput.className = "playlist-tracks";
-      trackCountInput.placeholder = "Number of tracks";
-      trackCountInput.type = "number";
-      trackCountInput.value = "10";
-      wrapper.appendChild(trackCountInput);
-
-      const createButton = document.createElement('button');
-      createButton.textContent = "create";
-      createButton.onclick = async () => {
-        const res = await fetch('/api/playlist/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: nameInput.value, length: Number(trackCountInput.value) })
-        });
-        const playlist_data = await res.json();
-        this.render(playlist_data);
-      };
-
-      wrapper.appendChild(createButton);
+    if (!this.user){
+      this.loginUI(user);
     } else {
-      const playlistName = document.createElement('h1');
-      playlistName.className = "playlist-name";
-      playlistName.innerText = data.name;
-      wrapper.appendChild(playlistName);
-
-      const desc = document.createElement("p");
-      desc.textContent = data.description;
-      wrapper.appendChild(desc);
-
-      const updateButton = document.createElement('button');
-      updateButton.textContent = "update";
-      updateButton.onclick = async () => {
-        const res = await fetch('/api/playlist/update', {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        const playlist_data = await res.json();
-        this.render(playlist_data);
-      };
-
-      wrapper.appendChild(updateButton);
+      this.displayUser(user);
+      if (!data) {
+        this.createPlaylist(playlist);
+      } else {
+        this.displayPlaylist(playlist, data)
+      }
     }
 
+    wrapper.appendChild(user);
+    wrapper.appendChild(playlist);
     this.container.appendChild(wrapper);
     return wrapper;
   }
@@ -81,6 +131,7 @@ class PlaylistManager {
   }
 
   render(data) {
+    this.user = this.session.state.user;
     this.container.innerHTML = "";
     this.data = data;
 
