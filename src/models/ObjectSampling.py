@@ -161,10 +161,13 @@ class WeightedCombinedSampler(SamplingStrategy):
 
       combined_weights += w * temp_weights
 
+    n = min(self.n_samples, len(items))
     if np.sum(combined_weights) == 0:
-      return random.choices(items, k=self.n_samples)
-
-    return random.choices(items, weights=combined_weights, k=self.n_samples)
+      return random.sample(items, n)
+    else:
+      probs = combined_weights / np.sum(combined_weights)
+      indices = np.random.choice(len(items), size=n, replace=False, p=probs)
+      return [items[i] for i in indices]
 
 class SamplingConfig(BaseModel):
   filter: CombinedFilter

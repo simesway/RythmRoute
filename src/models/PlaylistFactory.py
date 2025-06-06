@@ -107,13 +107,10 @@ class PlaylistFactory(BaseModel):
       genre.artists.sampled.clear()
 
     pool = ArtistHandler().get_pool(genre_id)
-    artists = config.filter(pool.artists) if config.filter else pool.artists
+    artists = config.filter(pool.artists) if config.filter.filters else pool.artists
 
-    for _ in range(100):
-      if len(genre.artists.sampled) >= config.limit:
-        break
-      artist = config.sampler.apply(artists)
-      genre.artists.sampled.add(artist[0].id)
+    artist_ids = set(a.id for a in config.sampler.apply(artists))
+    genre.artists.sampled.update(artist_ids)
 
   def sampled_artists(self, genre_id: Optional[int] = None) -> Dict[int, list]:
     if genre_id and self.genres[genre_id].selected:
