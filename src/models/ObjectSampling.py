@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Any, Union, Literal
 import numpy as np
 import random
