@@ -1,25 +1,3 @@
-class Filter {
-  constructor(attribute = '', min = '', max = '') {
-    this.attribute = attribute;
-    this.min = min;
-    this.max = max;
-  }
-
-  matches(obj) {
-    const val = obj[this.attribute];
-    return val >= this.min && val <= this.max;
-  }
-
-  toJSON() {
-    return {
-      attribute: this.attribute,
-      min: this.min,
-      max: this.max
-    };
-  }
-}
-
-
 class GenreCard {
   constructor(session, genre, element_id) {
     this.session = session;
@@ -30,17 +8,27 @@ class GenreCard {
     this.filters = [];
 
     this.container = document.getElementById(element_id);
-    this.card = this.initial_card()
+    this.card = this.update_card()
     this.container.appendChild(this.card);
+
+    this.session.subscribe((state) => {
+      this.render_sampled_tracks(state);
+    });
   }
 
-  initial_card(){
+  update_card(data){
+    if (data) {
+      this.genre = data.factory.genres[this.genre.id];
+    }
+
+
     const card = document.createElement('div');
     card.className = 'card';
     card.id = this.key;
-    card.innerHTML = `
-      <h3>${this.genre.name}</h3>
-    `;
+
+    const title = document.createElement("h3");
+    title.innerText = this.genre.name;
+    card.appendChild(title);
 
     const artistSamplerSelection = document.createElement('div');
     artistSamplerSelection.style.border = '1px solid #ccc';
@@ -61,6 +49,15 @@ class GenreCard {
   }
 
   initArtistSamplers(container) {
+    const genreState = this.session.state.factory.genres[this.genre.id];
+
+    const savedConfig = genreState.artists ? genreState.artists : null;
+    const savedFilter = savedConfig ? savedConfig.filters : null;
+    const savedSampler = savedConfig ? savedConfig.sampler : null;
+
+    console.log(savedFilter, savedSampler);
+
+
     const submitBtn = document.createElement('button');
     submitBtn.style.width = "70%"
     submitBtn.style.padding = "2px"
@@ -71,8 +68,8 @@ class GenreCard {
     const lInput = document.createElement('input');
     lInput.type = 'number';
     lInput.className = 'artist-limit';
-    lInput.value = '0';
-    lInput.min = "0";
+    lInput.value = savedSampler ? savedSampler.n_samples : '1';
+    lInput.min = "1";
     lInput.style.padding = "0px"
     lInput.style.margin = "2px"
     lInput.style.width = '20%';
@@ -82,18 +79,27 @@ class GenreCard {
     const attributes = ["bouncyness", "organicness", "popularity"];
 
     attributes.forEach(attr => {
+      const filter = savedFilter ? savedFilter.find(filter => filter.attr === attr) : null;
+      const index = savedSampler.samplers ? savedSampler.samplers.findIndex(sampler => sampler.attr === attr) : -1;
+      const sampler = index !== -1 ? savedSampler.samplers[index] : null;
+      const weight = index !== -1 ? savedSampler.weights[index] : "0.333";
+      const isChecked = filter || sampler;
+      console.log(sampler, weight)
+
       const wrapper = document.createElement('div');
       wrapper.className = 'strategy';
 
 
       wrapper.innerHTML += `
-        <label><input type="checkbox" class="enable-strategy" /> ${attr}</label>
-        <input type="number" class="weight" placeholder="Weight" step="0.1" min="0" max="1" value="0.333"/>
+        <label><input type="checkbox" class="enable-strategy" ${isChecked ? "checked":""}/> ${attr}</label>
+        <input type="number" class="weight" placeholder="Weight" step="0.1" min="0" max="1" value="${weight}"/>
       `;
+
+
 
       const detailPanel = document.createElement('div');
       detailPanel.className = 'details';
-      detailPanel.style.display = 'none';
+      detailPanel.style.display = isChecked ? 'grid':'none';
       detailPanel.style.gridTemplateColumns =  'repeat(4, max-content)';
       detailPanel.style.gap = '2px 4px';
       detailPanel.style.alignItems = 'left';
@@ -105,10 +111,10 @@ class GenreCard {
       const minInput = document.createElement('input');
       minInput.type = 'number';
       minInput.className = 'min-value';
-      minInput.value = '0';
+      minInput.value = filter ? filter.min : "0";
       minInput.min = "0";
       minInput.max = attr === "popularity" ? '100' : '1';
-      minInput.step = attr === "popularity" ? '1' : '0.001';
+      minInput.step = attr === "popularity" ? '1' : '0.0025';
       minInput.style.width = '4em';
       minInput.style.minWidth = '0';
       minInput.style.alignSelf = 'end';
@@ -122,10 +128,10 @@ class GenreCard {
       const maxInput = document.createElement('input');
       maxInput.type = 'number';
       maxInput.className = 'max-value';
-      maxInput.value = attr === "popularity" ? '100' : '1';
+      maxInput.value = filter ? filter.max : (attr === "popularity" ? '100' : '1');
       maxInput.min = "0";
       maxInput.max = attr === "popularity" ? '100' : '1';
-      maxInput.step = attr === "popularity" ? '1' : '0.001';
+      maxInput.step = attr === "popularity" ? '1' : '0.005';
       maxInput.style.width = '4em';
       maxInput.style.minWidth = '0';
       maxInput.style.alignSelf = 'end';
@@ -135,7 +141,7 @@ class GenreCard {
 
       // higher is better
       const toggleBtn = document.createElement("button");
-      let mode = "minimize";
+      let mode = sampler ? (sampler.higher_is_better ? "maximize":"minimize") : "minimize";
       toggleBtn.className = "higher-is-better"
       toggleBtn.textContent = mode;
 
@@ -158,22 +164,21 @@ class GenreCard {
         option.textContent = mode;
         select.appendChild(option);
       });
+      select.value = sampler ? sampler.mode : "rank";
       detailPanel.appendChild(modeLabel);
       detailPanel.appendChild(select);
 
 
-      // Alpha slider
-      const alphaWrapper = document.createElement('div');
-      alphaWrapper.style.display = 'block';
-
-      const alphaLabel = document.createElement('label');
-      alphaLabel.textContent = 'Strength:';
+      const logMin = Math.log10(0.01);
+      const logMax = Math.log10(100);
+      const alpha = sampler ? sampler.alpha : 1.0;
+      const sliderValue = ((Math.log10(alpha) - logMin) / (logMax - logMin)) * 100;
       const alphaInput = document.createElement('input');
       alphaInput.type = 'range';
       alphaInput.min = "0";
       alphaInput.max = '100';
       alphaInput.step = '0.01';
-      alphaInput.value = '0.5';
+      alphaInput.value = sliderValue;
       alphaInput.className = 'alpha-slider';
       alphaInput.style.gridColumn = '1 / -1';
       alphaInput.style.height = 'auto';
@@ -248,14 +253,9 @@ class GenreCard {
       n_samples: limit
     };
 
-    const filterPayload = {
-      type: "CombinedFilter",
-      filters: filters
-    };
-
     const payload = {
       sampler: samplerPayload,
-      filter: filterPayload
+      filters: filters
     };
 
     this.session.updateOnServer(payload, `/api/sample/artists/${this.genre.id}`);
@@ -272,8 +272,8 @@ class GenreCard {
     const lInput = document.createElement('input');
     lInput.type = 'number';
     lInput.className = 'track-limit';
-    lInput.value = '0';
-    lInput.min = "0";
+    lInput.value = '1';
+    lInput.min = "1";
     lInput.style.padding = "0px"
     lInput.style.margin = "2px"
     lInput.style.width = '20%';
@@ -411,13 +411,16 @@ class GenreCard {
     };
 
     this.session.updateOnServer(payload, `/api/sample/tracks/${this.genre.id}`);
-    this.render_sampled_tracks()
   }
+
 
   render_sampled_tracks() {
     const genre = this.session.state.factory.genres[this.genre.id]
+
+    if (!genre.tracks) return;
     const tracks = genre.tracks.sampled;
 
+    if (!tracks) return;
     let sampled_panel = document.getElementById(`${this.genre.id}-sampled-tracks`);
     sampled_panel.innerHTML = "";
 
@@ -427,25 +430,6 @@ class GenreCard {
       el.textContent = track.name;
       sampled_panel.appendChild(el);
     }
-  }
-
-  toggle_button(class_name, true_val, false_val) {
-    const button = document.createElement('button');
-    button.className = class_name;
-    let state = false;
-
-    const update = () => {
-      button.innerText = state ? true_val : false_val;
-      button.value = state;
-    };
-
-    button.onclick = () => {
-      state = !state;
-      update();
-    };
-
-    update();
-    return button;
   }
 
   destroy() {
