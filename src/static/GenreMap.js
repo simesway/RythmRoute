@@ -108,6 +108,7 @@ class GenreMap {
     let pos = this.layout.get(genre_id);
     const {x: x, y: y} = this.get_coords(pos.x, pos.y);
 
+    let b = 5;
     let r = genre.hasSubgenre ? 24 : 13;
 
     if (false) {
@@ -127,7 +128,7 @@ class GenreMap {
     }
 
     if (genre.hasSubgenre) {
-      this.p.strokeWeight(4);
+      //this.p.strokeWeight(b);
       this.p.stroke("#a5bbc9");
       if (this.genre_manager.isExpanded(genre_id)) {
         this.p.stroke("#256686");
@@ -136,12 +137,16 @@ class GenreMap {
 
     this.p.circle(x, y, r);
 
-    this.p.strokeWeight(4);
-    this.p.stroke(0)
+    this.p.strokeWeight(b);
+    this.p.stroke(0);
     this.p.fill(255);
     this.p.textAlign(this.p.CENTER, this.p.CENTER);
     this.p.textSize(15);
     this.p.text(genre.name, x, y - r);
+
+
+    const isHovered = this.p.dist(this.p.mouseX, this.p.mouseY, x, y) < r;
+    return isHovered;
   }
 
 
@@ -179,10 +184,14 @@ class GenreMap {
       }
     }
 
-
+    let hoveredGenre = null;
     for (const genre_id of this.layout.keys()) {
-      this.draw_genre(genre_id);
+      let isHovered = this.draw_genre(genre_id);
+      if (isHovered) hoveredGenre = genre_id;
     }
+
+    // Redraw to bring hovered to the front
+    if (hoveredGenre) this.draw_genre(hoveredGenre);
   }
 
   mousePressed() {
