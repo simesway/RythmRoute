@@ -4,6 +4,7 @@ from networkx.drawing.nx_agraph import graphviz_layout
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Set
 
+from src import config
 from src.database.models import RelationshipTypeEnum
 from src.models.SessionResponse import Genre, GenreRelationship, Coordinate
 from src.core.GenreGraph import GenreGraph
@@ -64,7 +65,7 @@ class DisplayStrategy(ABC):
       for rel in node_edges.get("links", [])
     ]
     layout = {
-      genre_id: Coordinate(x=pos["x"], y=pos["y"])
+      genre_id: Coordinate(x=round(pos["x"], config.DEC_PREC), y=round(pos["y"], config.DEC_PREC))
       for genre_id, pos in layout.items()
     }
 
@@ -125,7 +126,7 @@ class StartingGenresStrategy(DisplayStrategy):
     return nodes - all_descendants
 
   def generate_subgraph(self, selected: Set[int], expanded: Set[int], highlight: int = None) -> nx.DiGraph:
-    all_nodes = self.starting_genres | selected
+    all_nodes = self.starting_genres | selected | expanded
 
     # Add subgenres between starting genres
     all_nodes |= self.get_subgenres_between(
@@ -139,6 +140,11 @@ class StartingGenresStrategy(DisplayStrategy):
     if selected:
       all_nodes |= self.get_subgenres_between(
         list(self.starting_genres), list(selected), RelationshipTypeEnum.SUBGENRE_OF.value
+      )
+
+    if expanded:
+      all_nodes |= self.get_subgenres_between(
+        list(self.starting_genres), list(expanded), RelationshipTypeEnum.SUBGENRE_OF.value
       )
 
     # Add children of expanded nodes
