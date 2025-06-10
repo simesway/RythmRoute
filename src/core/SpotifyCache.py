@@ -152,7 +152,7 @@ class SpotifyCache:
     if data:
       return SpotifyUser.model_validate_json(data)
 
-    sp = SpotifyUserClient().get_spotify_client(session_id)
+    sp = SpotifyUserClient(session_id).get_spotify_client()
     if sp is None:
       return None
     logging.info("Caching Spotify User")
