@@ -1,3 +1,4 @@
+import time
 import logging
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth, SpotifyOauthError
@@ -34,12 +35,17 @@ class SpotifyUserClient:
     self.cache_handler = RedisCacheHandler(redis_sync, key=self.key)
     self.sp_oauth = self._get_oauth_handler()
 
+  def _reset_expiration(self, expires_at: int):
+    ttl = expires_at - int(time.time())
+    redis_sync.expire(self.key, ttl)
+
   def get_spotify_client(self):
     token_info = self.sp_oauth.validate_token(self.cache_handler.get_cached_token())
     if token_info is None:
       logger.info("No valid token found in cache.")
       return None
 
+    self._reset_expiration(token_info['expires_at'])
     return Spotify(auth=token_info['access_token'])
 
   def get_auth_url(self):
@@ -49,6 +55,7 @@ class SpotifyUserClient:
     try:
       token_info = self.sp_oauth.get_access_token(code, as_dict=True, check_cache=True)
       logger.info(f"Got token.")
+      self._reset_expiration(token_info['expires_at'])
       return token_info['access_token']
     except SpotifyOauthError as e:
       logger.error(f"Failed to fetch token: {e}")
