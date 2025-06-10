@@ -12,7 +12,7 @@ router = APIRouter(prefix="/playlist", default_response_class=JSONResponse)
 
 @router.post("/create")
 async def create_playlist(request: Request, session: SessionData = Depends(get_session)):
-  sp = SpotifyUserClient.get_spotify_client(session.id)
+  sp = SpotifyUserClient(session.id).get_spotify_client()
   data = await request.json()
 
   if data["name"] == "":
@@ -32,7 +32,7 @@ async def create_playlist(request: Request, session: SessionData = Depends(get_s
 
 @router.get("/update")
 async def update_playlist(session: SessionData = Depends(get_session)):
-  sp = SpotifyUserClient.get_spotify_client(session.id)
+  sp = SpotifyUserClient(session.id).get_spotify_client()
   factory = session.factory
   factory.playlist.set_spotify(sp)
   factory.update_playlist()
