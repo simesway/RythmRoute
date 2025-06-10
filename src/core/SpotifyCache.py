@@ -7,6 +7,8 @@ import logging
 from src.core.redis_client import redis_sync
 from src.core.spotify_client import SpotifyClient, SpotifyUserClient
 
+logger = logging.getLogger(__name__)
+
 
 class CacheConfig:
   SINGLE_OBJECT_TTL = 86400  # 1 day
@@ -155,49 +157,63 @@ class SpotifyCache:
     sp = SpotifyUserClient(session_id).get_spotify_client()
     if sp is None:
       return None
-    logging.info("Caching Spotify User")
+    logger.info("Caching Spotify User")
     data = self.converter.to_user(sp.me())
     self.redis.setex(key, CacheConfig.SINGLE_OBJECT_TTL, data.model_dump_json())
     return data
 
-  def get_track(self, track_id: str) -> Track:
+  def get_track(self, track_id: str) -> Optional[Track]:
     key = f"track:{track_id}"
     data = self.redis.get(key)
-
     if data:
-      return Track.model_validate_json(data)
+        return Track.model_validate_json(data)
+    try:
+        logger.info(f"Caching Track: {track_id}")
+        track = self.spotify.track(track_id)
+        data = self.converter.to_track(track)
+        self.redis.setex(key, CacheConfig.SINGLE_OBJECT_TTL, data.model_dump_json())
+        return data
+    except SpotifyException as e:
+        logger.warning(f"SpotifyException in get_track: {e}")
+    except Exception as e:
+        logger.error(f"Unhandled error in get_track: {e}")
+    return None
 
-    logging.info(f"Caching Track: {track_id}")
-    track = self.spotify.track(track_id)
-    data = self.converter.to_track(track)
-    self.redis.setex(key, CacheConfig.SINGLE_OBJECT_TTL, data.model_dump_json())
-    return data
-
-  def get_album(self, album_id: str) -> Album:
+  def get_album(self, album_id: str) -> Optional[Album]:
     key = f"album:{album_id}"
     data = self.redis.get(key)
-
     if data:
       return Album.model_validate_json(data)
 
-    logging.info(f"Caching Album: {album_id}")
-    album = self.spotify.album(album_id)
-    data = self.converter.to_album(album)
-    self.redis.setex(key, CacheConfig.SINGLE_OBJECT_TTL, data.model_dump_json())
-    return data
+    try:
+      logger.info(f"Caching Album: {album_id}")
+      album = self.spotify.album(album_id)
+      data = self.converter.to_album(album)
+      self.redis.setex(key, CacheConfig.SINGLE_OBJECT_TTL, data.model_dump_json())
+      return data
+    except SpotifyException as e:
+        logger.warning(f"SpotifyException in get_album: {e}")
+    except Exception as e:
+        logger.error(f"Unhandled error in get_album: {e}")
+    return None
 
-  def get_artist(self, artist_id: str) -> Artist:
+  def get_artist(self, artist_id: str) -> Optional[Artist]:
     key = f"artist:{artist_id}"
     data = self.redis.get(key)
-
     if data:
       return Artist.model_validate_json(data)
 
-    logging.info(f"Caching Artist: {artist_id}")
-    artist = self.spotify.artist(artist_id)
-    data = self.converter.to_artist(artist)
-    self.redis.setex(key, CacheConfig.SINGLE_OBJECT_TTL, data.model_dump_json())
-    return data
+    try:
+      logger.info(f"Caching Artist: {artist_id}")
+      artist = self.spotify.artist(artist_id)
+      data = self.converter.to_artist(artist)
+      self.redis.setex(key, CacheConfig.SINGLE_OBJECT_TTL, data.model_dump_json())
+      return data
+    except SpotifyException as e:
+      logger.warning(f"SpotifyException in get_artist: {e}")
+    except Exception as e:
+      logger.error(f"Unhandled error in get_artist: {e}")
+    return None
 
   def get_albums(self, album_ids: List[str]) -> List[Album]:
     keys = [f"album:{aid}" for aid in album_ids]
@@ -214,14 +230,15 @@ class SpotifyCache:
 
     for i in range(0, len(uncached_ids), CacheConfig.MAX_ALBUM_BATCH):
       batch = uncached_ids[i:i+CacheConfig.MAX_ALBUM_BATCH]
-      logging.info(f"Caching Album Batch: {batch}")
+      logger.info(f"Caching Album Batch: {batch}")
       try:
         fetched = self.spotify.albums(batch)['albums']
         converted = [self.converter.to_album(a) for a in fetched]
         for album in converted:
           self.redis.setex(f"album:{album.id}", CacheConfig.SINGLE_OBJECT_TTL, album.model_dump_json())
         results.extend(converted)
-      except SpotifyException:
+      except SpotifyException as e:
+        logger.warning(f"SpotifyException in get_albums: {e}")
         continue
 
     return results
@@ -241,14 +258,15 @@ class SpotifyCache:
 
     for i in range(0, len(uncached_ids), CacheConfig.MAX_ARTIST_BATCH):
       batch = uncached_ids[i:i+CacheConfig.MAX_ARTIST_BATCH]
-      logging.info(f"Caching Artist Batch: {batch}")
+      logger.info(f"Caching Artist Batch: {batch}")
       try:
         fetched = self.spotify.artists(batch)['artists']
         converted = [self.converter.to_artist(a) for a in fetched]
         for artist in converted:
           self.redis.setex(f"artist:{artist.id}", CacheConfig.SINGLE_OBJECT_TTL, artist.model_dump_json())
         results.extend(converted)
-      except SpotifyException:
+      except SpotifyException as e:
+        logger.warning(f"SpotifyException in get_albums: {e}")
         continue
 
     return results
@@ -256,31 +274,41 @@ class SpotifyCache:
   def get_top_tracks(self, artist_id: str) -> List[Track]:
     key = f"artist:top_tracks:{artist_id}"
     data = self.redis.get(key)
-
     if data:
       return self.converter.deserialize(Track, data)
 
-    logging.info(f"Caching Top Tracks: {artist_id}")
-    tracks = self.spotify.artist_top_tracks(artist_id)['tracks']
-    data = [self.converter.to_track(t) for t in tracks]
-    self.redis.setex(key, CacheConfig.TOP_TRACKS_TTL, self.converter.serialize(data))
-    return data
+    try:
+      logger.info(f"Caching Top Tracks: {artist_id}")
+      tracks = self.spotify.artist_top_tracks(artist_id)['tracks']
+      data = [self.converter.to_track(t) for t in tracks]
+      self.redis.setex(key, CacheConfig.TOP_TRACKS_TTL, self.converter.serialize(data))
+      return data
+    except SpotifyException as e:
+      logger.warning(f"SpotifyException in get_top_tracks: {e}")
+    except Exception as e:
+      logger.error(f"Unhandled error in get_top_tracks: {e}")
+    return []
 
   def get_releases(self, artist_id: str) -> List[Album]:
     key = f"artist:releases:{artist_id}"
     data = self.redis.get(key)
-
     if data:
       return self.converter.deserialize(Album, data)
 
-    logging.info(f"Caching Releases: {artist_id}")
-    albums = self.spotify.artist_albums(
-      artist_id,
-      include_groups='album,compilation,single,ep'
-    )['items']
-    data = [self.converter.to_album(a) for a in albums]
-    self.redis.setex(key, CacheConfig.ALBUMS_TTL, self.converter.serialize(data))
-    return data
+    try:
+      logger.info(f"Caching Releases: {artist_id}")
+      albums = self.spotify.artist_albums(
+        artist_id,
+        include_groups='album,compilation,single,ep'
+      )['items']
+      data = [self.converter.to_album(a) for a in albums]
+      self.redis.setex(key, CacheConfig.ALBUMS_TTL, self.converter.serialize(data))
+      return data
+    except SpotifyException as e:
+      logger.warning(f"SpotifyException in get_releases: {e}")
+    except Exception as e:
+      logger.error(f"Unhandled error in get_releases: {e}")
+    return []
 
   def get_album_tracks(self, album_id: str) -> List[Track]:
     key = f"album:tracks:{album_id}"
@@ -290,9 +318,12 @@ class SpotifyCache:
       return self.converter.deserialize(Track, data)
     try:
       tracks = self.spotify.album_tracks(album_id)['items']
-    except SpotifyException:
-      return []
-    logging.info(f"Caching Album Tracks: {album_id}")
-    data = [self.converter.to_track(t, album_id) for t in tracks]
-    self.redis.setex(key, CacheConfig.ALBUM_TRACKS_TTL, self.converter.serialize(data))
-    return data
+      logger.info(f"Caching Album Tracks: {album_id}")
+      data = [self.converter.to_track(t, album_id) for t in tracks]
+      self.redis.setex(key, CacheConfig.ALBUM_TRACKS_TTL, self.converter.serialize(data))
+      return data
+    except SpotifyException as e:
+      logger.warning(f"SpotifyException in get_releases: {e}")
+    except Exception as e:
+      logger.error(f"Unhandled error in get_releases: {e}")
+    return []
