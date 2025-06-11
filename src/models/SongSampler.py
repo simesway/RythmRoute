@@ -323,6 +323,7 @@ class CombinedSongSampler:
         # Sample one additional track
         additional_track = sampler.sample(artist_ids, 1)
         sampled_tracks.update(additional_track)
+      iterations += 1
 
       # If we have more than needed, we can trim the set
     if len(sampled_tracks) > num:
