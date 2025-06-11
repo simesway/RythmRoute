@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from src.core.SpotifyCache import Album, Track, SpotifyCache, Release, AlbumType
-from typing import Dict, List, Literal, Set, Union, Annotated
+from typing import Dict, List, Literal, Set, Union, Annotated, Optional
 from collections import defaultdict
 from datetime import datetime
 import numpy as np
@@ -292,20 +292,42 @@ class StrategyWeightPair(BaseModel):
 class CombinedSamplerConfig(SongSamplerConfig):
   type: Literal["combined"]
   strategies: List[StrategyWeightPair] = []
+  n_samples: Optional[int] = None
 
 class CombinedSongSampler:
   def __init__(self, config: CombinedSamplerConfig):
     self.config = config
 
-  def sample(self, artist_ids: List[str], num: int) -> Set[Track]:
+  def sample(self, artist_ids: List[str], num: Optional[int] = None) -> Set[Track]:
+    if self.config.n_samples and not num:
+      num = self.config.n_samples
+    num = 1 if num is None else num
     sampled_tracks = set()
     total_weight = sum(strategy.weight for strategy in self.config.strategies)
+
     for pair in self.config.strategies:
       sampler_cls = SAMPLERS[pair.strategy.type]
       sampler: SongSampler = sampler_cls(config=pair.strategy)
       portion = round(num * (pair.weight / total_weight))
       tracks = sampler.sample(artist_ids, portion)
       sampled_tracks.update(tracks)
+
+    # collect missing samples
+    iterations = 0
+    while len(sampled_tracks) < num and iterations < 20:
+      for pair in self.config.strategies:
+        if len(sampled_tracks) >= num:
+          break
+        sampler_cls = SAMPLERS[pair.strategy.type]
+        sampler: SongSampler = sampler_cls(config=pair.strategy)
+        # Sample one additional track
+        additional_track = sampler.sample(artist_ids, 1)
+        sampled_tracks.update(additional_track)
+
+      # If we have more than needed, we can trim the set
+    if len(sampled_tracks) > num:
+      sampled_tracks = set(list(sampled_tracks)[:num])
+
     return sampled_tracks
 
 SAMPLERS = {

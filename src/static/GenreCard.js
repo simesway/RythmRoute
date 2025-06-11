@@ -405,9 +405,8 @@ class GenreCard {
     const limit = container.querySelector(".track-limit").value;
 
     const payload = {
-      limit: limit,
       genre: this.genre.id,
-      sampler: { type: "combined", strategies }
+      sampler: { type: "combined", strategies: strategies, n_samples: limit}
     };
 
     this.session.updateOnServer(payload, `/api/sample/tracks/${this.genre.id}`);
