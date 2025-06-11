@@ -21,7 +21,7 @@ class GenreManager {
 
     this.session = session;
     this.session.subscribe((state) => {
-      this.update_genres(state.genre_data);
+      this.update_genres(state);
     });
     this.session.fetchState()
   }
@@ -43,7 +43,8 @@ class GenreManager {
   }
 
   update_genres(data) {
-    const { genres: new_genres, state } = data;
+    const { factory: factory, genre_data: genre_data} = data;
+    const { genres: new_genres, state } = data.genre_data;
     const { selected, expanded, highlight } = state;
 
     this.selected = selected;
@@ -51,6 +52,14 @@ class GenreManager {
     this.highlight = highlight;
 
     const new_ids = new Set(new_genres.map(g => String(g.id)));
+
+    Object.entries(factory.genres).forEach(([id, genre]) => {
+      if (genre.selected) {
+        if (!this.genre_cards.get(String(id))) {
+          this.genre_cards.set(String(id), new GenreCard(this.session, genre, "card-container"))
+        }
+      }
+    });
 
     new_genres.forEach(genre => {
       const id = String(genre.id);

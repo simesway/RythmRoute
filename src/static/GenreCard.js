@@ -9,7 +9,6 @@ class GenreCard {
 
     this.container = document.getElementById(element_id);
     this.card = this.update_card()
-    this.container.appendChild(this.card);
 
     this.session.subscribe((state) => {
       this.render_sampled_tracks(state);
@@ -80,7 +79,7 @@ class GenreCard {
 
     attributes.forEach(attr => {
       const filter = savedFilter ? savedFilter.find(filter => filter.attr === attr) : null;
-      const index = savedSampler.samplers ? savedSampler.samplers.findIndex(sampler => sampler.attr === attr) : -1;
+      const index = savedSampler ? savedSampler.samplers.findIndex(sampler => sampler.attr === attr) : -1;
       const sampler = index !== -1 ? savedSampler.samplers[index] : null;
       const weight = index !== -1 ? savedSampler.weights[index] : "0.333";
       const isChecked = filter || sampler;
@@ -262,6 +261,12 @@ class GenreCard {
   }
 
   initSongSamplers(container) {
+    const genreState = this.session.state.factory.genres[this.genre.id];
+
+    const savedConfig = genreState.tracks ? genreState.tracks : null;
+    const savedSampler = savedConfig ? savedConfig.sampler : null;
+    const savedStrats = savedSampler && savedSampler.strategies.length > 0 ? savedSampler.strategies : null;
+
     const submitBtn = document.createElement('button');
     submitBtn.style.width = "70%"
     submitBtn.style.padding = "2px"
@@ -272,7 +277,7 @@ class GenreCard {
     const lInput = document.createElement('input');
     lInput.type = 'number';
     lInput.className = 'track-limit';
-    lInput.value = '1';
+    lInput.value = savedSampler ? savedSampler.n_samples : '1';
     lInput.min = "1";
     lInput.style.padding = "0px"
     lInput.style.margin = "2px"
@@ -285,10 +290,14 @@ class GenreCard {
       { type: "random_release", label: "Random Release", details: null },
       {
         type: "album_cluster", label: "Album Cluster", details: (parent) => {
+          const strategyConfig = savedStrats ? savedStrats.find(strat => strat.strategy.type === "album_cluster") || null : null;
+
+          const core_only = strategyConfig ? strategyConfig.strategy.core_only : false;
           const checkbox = document.createElement('input');
           checkbox.type = 'checkbox';
           checkbox.className = 'core-only';
-          checkbox.checked = true;
+          checkbox.checked = strategyConfig ? strategyConfig.strategy.core_only : true;
+          console.log(core_only, checkbox.checked)
           parent.appendChild(document.createTextNode("Core only "));
           parent.appendChild(checkbox);
 
@@ -302,6 +311,7 @@ class GenreCard {
             cb.type = 'checkbox';
             cb.id = `option${i}`;
             cb.value = label;
+            cb.checked = strategyConfig ? strategyConfig.strategy.exclude_types.includes(label) : false;
 
             const cbLabel = document.createElement('label');
             cbLabel.htmlFor = cb.id;
@@ -331,18 +341,20 @@ class GenreCard {
     ];
 
     strategies.forEach(s => {
+      const strategyConfig = savedStrats ? savedStrats.find(strat => strat.strategy.type === s.type) || null : null;
+
       const wrapper = document.createElement('div');
       wrapper.className = 'strategy';
       wrapper.dataset.type = s.type;
 
       wrapper.innerHTML = `
-        <label><input type="checkbox" class="enable-strategy" /> ${s.label}</label>
-        <input type="number" class="weight" placeholder="Weight" step="0.1" min="0" max="1" value="0.25"/>
+        <label><input type="checkbox" class="enable-strategy" ${strategyConfig ? "checked":""}/> ${s.label}</label>
+        <input type="number" class="weight" placeholder="Weight" step="0.1" min="0" max="10" value="${strategyConfig ? strategyConfig.weight : "0.1"}"/>
       `;
 
       const detailPanel = document.createElement('div');
       detailPanel.className = 'details';
-      detailPanel.style.display = 'none';
+      detailPanel.style.display = strategyConfig ? 'block' : 'none';
 
       if (s.details) s.details(detailPanel);
       wrapper.appendChild(detailPanel);
