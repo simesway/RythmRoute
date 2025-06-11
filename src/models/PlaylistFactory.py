@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from src.models.ArtistHandler import ArtistHandler
 from src.models.ObjectSampling import SamplingConfig, CombinedFilter, WeightedCombinedSampler, AttributeFilter
 from src.models.PlaylistEditor import PlaylistEditor
-from src.models.SongSampler import SongSamplerConfig, SAMPLERS
+from src.models.SongSampler import SongSamplerConfig, SAMPLERS, CombinedSamplerConfig
 from src.core.GenreGraph import GenreGraph
 from src.core.SpotifyCache import Track
 
@@ -18,7 +18,7 @@ class SampledArtists(BaseModel):
 
 
 class SampledTracks(BaseModel):
-  sampler: Optional[SongSamplerConfig] = None
+  sampler: Optional[CombinedSamplerConfig] = None
   sampled: Set[Track] = Field(default_factory=set)
 
 
@@ -150,11 +150,11 @@ class PlaylistFactory(BaseModel):
     self.playlist = playlist
 
   def rebuild_playlist(self):
-    trackset = set(self.playlist.tracks)
+    track_set = set(self.playlist.tracks)
     sampled_tracks = self.sampled_tracks()
 
-    self.playlist.remove_tracks(trackset - sampled_tracks)
-    self.playlist.add_tracks(sampled_tracks - trackset)
+    self.playlist.remove_tracks(track_set - sampled_tracks)
+    self.playlist.add_tracks(sampled_tracks - track_set)
 
   def reorder_playlist(self):
     pass # TODO
