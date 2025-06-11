@@ -117,7 +117,7 @@ class PlaylistFactory(BaseModel):
       return {genre_id: list(self.genres[genre_id].artists.sampled)}
     return {genre.id: list(genre.artists.sampled) for genre in self.genres.values() if genre.selected and genre.artists}
 
-  def sample_tracks(self, genre_id: int, sampler_config: SongSamplerConfig, limit: int=20, reset: bool=True):
+  def sample_tracks(self, genre_id: int, sampler_config: SongSamplerConfig, reset: bool=True):
     logging.info(f"Sampling Tracks: {genre_id}")
     genre: UserGenre = self.genres[genre_id]
 
@@ -129,7 +129,7 @@ class PlaylistFactory(BaseModel):
 
     artist_ids = [a.spotify_id for a in pool.artists if a.id in self.genres[genre_id].artists.sampled]
     sampler = SAMPLERS[sampler_config.type](config=sampler_config)
-    tracks = sampler.sample(artist_ids, limit)
+    tracks = sampler.sample(artist_ids)
 
     if reset:
       genre.tracks.sampled.clear()

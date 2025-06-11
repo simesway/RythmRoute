@@ -171,5 +171,5 @@ class WeightedCombinedSampler(SamplingStrategy):
 
 
 class SamplingConfig(BaseModel):
-  filter: CombinedFilter
+  filters: Optional[List[AttributeFilter]] = Field(default_factory=list)
   sampler: WeightedCombinedSampler
