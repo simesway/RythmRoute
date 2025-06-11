@@ -1,0 +1,16 @@
+.sampler {
+    border: 1px solid #333333;
+    padding: 8px;
+}
+
+.sample-btn {
+    width: 70%;
+    padding: 2px;
+}
+
+.num-samples {
+    padding: 0;
+    margin: 0;
+    width: 20%;
+    min-width: 0;
+}

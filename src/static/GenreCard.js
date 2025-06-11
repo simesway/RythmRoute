@@ -15,32 +15,20 @@ class GenreCard {
     });
   }
 
-  update_card(data){
+  update_card(data) {
     if (data) {
       this.genre = data.factory.genres[this.genre.id];
     }
 
-
-    const card = document.createElement('div');
-    card.className = 'card';
+    const template = document.getElementById("genre-card-template");
+    const card = template.content.cloneNode(true).children[0];
     card.id = this.key;
+    card.querySelector(".genre-name").innerText = this.genre.name;
 
-    const title = document.createElement("h3");
-    title.innerText = this.genre.name;
-    card.appendChild(title);
+    const artistSamplerSection = card.querySelector(".artist-sampler-section");
+    this.initArtistSamplers(artistSamplerSection);
 
-    const artistSamplerSelection = document.createElement('div');
-    artistSamplerSelection.style.border = '1px solid #ccc';
-    artistSamplerSelection.style.padding = "8px";
-    artistSamplerSelection.className = 'artist-sampler-section';
-    card.appendChild(artistSamplerSelection);
-    this.initArtistSamplers(artistSamplerSelection);
-
-    const songSamplerSection = document.createElement('div');
-    songSamplerSection.style.border = '1px solid #ccc';
-    songSamplerSection.style.padding = "8px";
-    songSamplerSection.className = 'song-sampler-section';
-    card.appendChild(songSamplerSection);
+    const songSamplerSection = card.querySelector(".song-sampler-section");
     this.initSongSamplers(songSamplerSection);
 
     this.container.appendChild(card);
@@ -56,24 +44,11 @@ class GenreCard {
 
     console.log(savedFilter, savedSampler);
 
+    let btn = container.querySelector(".sample-btn");
+    btn.onclick = () => this.sendArtistSamplerConfig(container);
 
-    const submitBtn = document.createElement('button');
-    submitBtn.style.width = "70%"
-    submitBtn.style.padding = "2px"
-    submitBtn.innerText = "sample artists";
-    submitBtn.onclick = () => this.sendArtistSamplerConfig(container);
-    container.appendChild(submitBtn);
-
-    const lInput = document.createElement('input');
-    lInput.type = 'number';
-    lInput.className = 'artist-limit';
+    let lInput = container.querySelector(".num-samples");
     lInput.value = savedSampler ? savedSampler.n_samples : '1';
-    lInput.min = "1";
-    lInput.style.padding = "0px"
-    lInput.style.margin = "2px"
-    lInput.style.width = '20%';
-    lInput.style.minWidth = '0';
-    container.appendChild(lInput);
 
     const attributes = ["bouncyness", "organicness", "popularity"];
 
@@ -243,7 +218,7 @@ class GenreCard {
       });
     });
 
-    const limit = container.querySelector('.artist-limit').value;
+    const limit = container.querySelector('.num-samples').value;
 
     const samplerPayload = {
       type: "WeightedCombinedSampler",
