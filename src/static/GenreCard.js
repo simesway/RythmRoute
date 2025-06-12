@@ -25,6 +25,21 @@ class GenreCard {
     card.id = this.key;
     card.querySelector(".genre-name").innerText = this.genre.name;
 
+    // --- Collapse logic ---
+    const header = card.querySelector(".genre-name");
+    const content = card.querySelector(".card-content");
+    header.style.cursor = "pointer";
+    header.addEventListener("click", () => {
+      // Collapse all other card contents
+      document.querySelectorAll(".card-content").forEach(el => {
+        if (el !== content) el.style.display = "none";
+      });
+
+      // Toggle this one
+      content.style.display = content.style.display === "none" ? "block" : "none";
+    });
+    // -----------------------
+
     const artistSamplerSection = card.querySelector(".artist-sampler-section");
     this.initArtistSamplers(artistSamplerSection);
     const artistList = card.querySelector('.sampled-artists');
