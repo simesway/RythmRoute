@@ -27,12 +27,57 @@ class GenreCard {
 
     const artistSamplerSection = card.querySelector(".artist-sampler-section");
     this.initArtistSamplers(artistSamplerSection);
+    const artistList = card.querySelector('.sampled-artists');
+    artistList.id = `${this.genre.id}-sampled-artists`
 
     const songSamplerSection = card.querySelector(".song-sampler-section");
     this.initSongSamplers(songSamplerSection);
 
     this.container.appendChild(card);
     return card;
+  }
+
+  createAttributeStrategy(
+    {
+      name,
+      weight=0.1,
+      min = 0,
+      max = 1,
+      mode = "rank",
+      alpha = 10,
+      checked = true,
+      higher_is_better = "minimize",
+    } = {}) {
+    const tmpl = document.getElementById("attribute-strategy-template");
+    const node = tmpl.content.cloneNode(true);
+
+    const cb = node.querySelector(".enable-strategy");
+    const details = node.querySelector(".strategy-details")
+    cb.checked = checked;
+    details.style.display = checked ? 'grid' : 'none';
+    cb.addEventListener('change', (e) => { details.style.display = e.target.checked ? 'grid' : 'none'; });
+
+    const toggleBtn = node.querySelector(".higher-is-better");
+    toggleBtn.value = higher_is_better;
+    toggleBtn.textContent = higher_is_better;
+    toggleBtn.addEventListener("click", () => {
+      let mode = toggleBtn.value;
+      mode = mode === "minimize" ? "maximize" : "minimize";
+      toggleBtn.textContent = mode;
+      toggleBtn.value = mode;
+    });
+
+    node.querySelector(".strategy-name").textContent = name;
+    node.querySelector(".weight").value = weight;
+    node.querySelector(".min-value").value = min;
+    node.querySelector(".max-value").value = max;
+    node.querySelector(".sampling-mode").value = mode;
+
+    const logMin = Math.log10(0.01);
+    const logMax = Math.log10(100);
+    const sliderValue = ((Math.log10(alpha) - logMin) / (logMax - logMin)) * 100;
+    node.querySelector(".alpha-slider").value = sliderValue;
+    return node;
   }
 
   initArtistSamplers(container) {
@@ -42,8 +87,6 @@ class GenreCard {
     const savedFilter = savedConfig ? savedConfig.filters : null;
     const savedSampler = savedConfig ? savedConfig.sampler : null;
 
-    console.log(savedFilter, savedSampler);
-
     let btn = container.querySelector(".sample-btn");
     btn.onclick = () => this.sendArtistSamplerConfig(container);
 
@@ -52,132 +95,28 @@ class GenreCard {
 
     const attributes = ["bouncyness", "organicness", "popularity"];
 
+    const strategies = container.querySelector(".strategies");
+
     attributes.forEach(attr => {
       const filter = savedFilter ? savedFilter.find(filter => filter.attr === attr) : null;
       const index = savedSampler ? savedSampler.samplers.findIndex(sampler => sampler.attr === attr) : -1;
       const sampler = index !== -1 ? savedSampler.samplers[index] : null;
-      const weight = index !== -1 ? savedSampler.weights[index] : "0.333";
       const isChecked = filter || sampler;
-      console.log(sampler, weight)
 
-      const wrapper = document.createElement('div');
-      wrapper.className = 'strategy';
+      const config = {
+        name: attr,
+        checked: !!isChecked,
+        weight: index !== -1 ? savedSampler.weights[index] : "0.1",
+        min: filter ? filter.min : "0",
+        max: filter ? filter.max : "1",
+        mode: sampler ? sampler.mode : "rank",
+        alpha: sampler ? sampler.alpha : 1.0,
+        higher_is_better:  sampler ? (sampler.higher_is_better ? "maximize":"minimize") : "minimize"
+      };
 
-
-      wrapper.innerHTML += `
-        <label><input type="checkbox" class="enable-strategy" ${isChecked ? "checked":""}/> ${attr}</label>
-        <input type="number" class="weight" placeholder="Weight" step="0.1" min="0" max="1" value="${weight}"/>
-      `;
-
-
-
-      const detailPanel = document.createElement('div');
-      detailPanel.className = 'details';
-      detailPanel.style.display = isChecked ? 'grid':'none';
-      detailPanel.style.gridTemplateColumns =  'repeat(4, max-content)';
-      detailPanel.style.gap = '2px 4px';
-      detailPanel.style.alignItems = 'left';
-      detailPanel.style.padding = '10px';
-
-      // Min input
-      const minLabel = document.createElement('label');
-      minLabel.textContent = 'min:';
-      const minInput = document.createElement('input');
-      minInput.type = 'number';
-      minInput.className = 'min-value';
-      minInput.value = filter ? filter.min : "0";
-      minInput.min = "0";
-      minInput.max = attr === "popularity" ? '100' : '1';
-      minInput.step = attr === "popularity" ? '1' : '0.0025';
-      minInput.style.width = '4em';
-      minInput.style.minWidth = '0';
-      minInput.style.alignSelf = 'end';
-
-      detailPanel.appendChild(minLabel);
-      detailPanel.appendChild(minInput);
-
-      // Max input
-      const maxLabel = document.createElement('label');
-      maxLabel.textContent = 'max:';
-      const maxInput = document.createElement('input');
-      maxInput.type = 'number';
-      maxInput.className = 'max-value';
-      maxInput.value = filter ? filter.max : (attr === "popularity" ? '100' : '1');
-      maxInput.min = "0";
-      maxInput.max = attr === "popularity" ? '100' : '1';
-      maxInput.step = attr === "popularity" ? '1' : '0.005';
-      maxInput.style.width = '4em';
-      maxInput.style.minWidth = '0';
-      maxInput.style.alignSelf = 'end';
-
-      detailPanel.appendChild(maxLabel);
-      detailPanel.appendChild(maxInput);
-
-      // higher is better
-      const toggleBtn = document.createElement("button");
-      let mode = sampler ? (sampler.higher_is_better ? "maximize":"minimize") : "minimize";
-      toggleBtn.className = "higher-is-better"
-      toggleBtn.textContent = mode;
-
-      toggleBtn.addEventListener("click", () => {
-        mode = mode === "minimize" ? "maximize" : "minimize";
-        toggleBtn.textContent = mode;
-        toggleBtn.value = mode;
-      });
-      toggleBtn.style.gridColumn = 'span 2';
-      detailPanel.appendChild(toggleBtn);
-
-      // MODE
-      const modeLabel = document.createElement('label');
-      modeLabel.textContent = 'mode:';
-      const select = document.createElement("select");
-      select.className = "sampling-mode";
-      ["rank", "softmax", "log"].forEach((mode) => {
-        const option = document.createElement("option");
-        option.value = mode;
-        option.textContent = mode;
-        select.appendChild(option);
-      });
-      select.value = sampler ? sampler.mode : "rank";
-      detailPanel.appendChild(modeLabel);
-      detailPanel.appendChild(select);
-
-
-      const logMin = Math.log10(0.01);
-      const logMax = Math.log10(100);
-      const alpha = sampler ? sampler.alpha : 1.0;
-      const sliderValue = ((Math.log10(alpha) - logMin) / (logMax - logMin)) * 100;
-      const alphaInput = document.createElement('input');
-      alphaInput.type = 'range';
-      alphaInput.min = "0";
-      alphaInput.max = '100';
-      alphaInput.step = '0.01';
-      alphaInput.value = sliderValue;
-      alphaInput.className = 'alpha-slider';
-      alphaInput.style.gridColumn = '1 / -1';
-      alphaInput.style.height = 'auto';
-      alphaInput.style.minHeight = '0';
-
-
-      detailPanel.appendChild(alphaInput);
-
-      wrapper.querySelector('.enable-strategy').addEventListener('change', (e) => {
-        detailPanel.style.display = e.target.checked ? 'grid' : 'none';
-      });
-      wrapper.appendChild(detailPanel);
-
-      container.appendChild(wrapper);
+      const strategy = this.createAttributeStrategy(config);
+      strategies.appendChild(strategy);
     })
-
-    const artistList = document.createElement('div');
-    artistList.id = `${this.genre.id}-sampled-artists`
-    artistList.className = 'sampled-artists';
-    artistList.style.maxHeight = '8rem';
-    artistList.style.overflowY = 'auto';
-    artistList.style.border = '1px solid #ccc';
-    artistList.style.padding = '8px';
-
-    container.appendChild(artistList);
   }
 
   sendArtistSamplerConfig(container) {

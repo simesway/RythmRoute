@@ -1,64 +1,181 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Green River Collective</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RythmRoute</title>
+
     <script src="../static/p5.js" defer></script>
+
     <link rel="stylesheet" href="../static/styles.css">
+  <link rel="stylesheet" href="../static/GenreCard.css">
+
+  <style>
+    :root {
+      --main-bg: #3c3c3c; /* define a color variable */
+    }
+
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      display: grid;
+      grid-template-rows: auto auto auto auto auto;
+      gap: 1rem;
+      padding: 1rem;
+    }
+    section {
+      background: #EEE;
+      padding: 1rem;
+      border-radius: 0.5rem;
+    }
+    h2 {
+      margin-top: 0;
+    }
+    .flex {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .canvas-container {
+      margin: 0;
+      width: 100%;
+      height: 70vh;
+      overflow: hidden;
+      position: relative;
+    }
+    #artist-map {
+      width: 100%;
+      height: 100%;
+    }
+    #genre-graph {
+      width: 100%;
+      height: 100%;
+    }
+    .config-panel {
+      background: #3a3a3a;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      flex: 1;
+    }
+    .track {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .track img {
+      width: 40px;
+      height: 40px;
+      object-fit: cover;
+      border-radius: 0.25rem;
+    }
+    button {
+      background: #444;
+      color: #eee;
+      border: none;
+      padding: 0.4rem 0.8rem;
+      border-radius: 0.3rem;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #666;
+    }
+
+    .config-panel {
+      background: #3a3a3a;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      flex: 1;
+    }
+    .track, .artist-entry {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .track img, .artist-entry img {
+      width: 40px;
+      height: 40px;
+      object-fit: cover;
+      border-radius: 0.25rem;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-    <div class="row">
-      <div id="left-sketch-1"></div>
-      <div class="right-panel">
-          <input id="genre-query" type="text" placeholder="Search..">
-          <button onclick="search_genre()">Send Data</button>
+  <section id="genre-panel">
+    <div class="canvas-container">
+      <div id="genre-graph" class="p5_canvas"></div>
+    </div>
+  </section>
 
-        <h1 id="genre-name">genre</h1>
-        <p id="genre-description">description</p>
+  <section id="artist-panel">
+    <div class="canvas-container">
+      <div id="artist-map" class="p5_canvas"></div>
+    </div>
+  </section>
+
+  <section id="artist-sampling">
+    <div class="flex" id="card-container"></div>
+  </section>
+
+  <section id="playlist">
+    <div id="playlist-container"></div>
+  </section>
+
+  <template id="genre-card-template">
+    <div class="card">
+      <h3 class="genre-name"></h3>
+      <div class="artist-sampler-section sampler">
+        <button class="sample-btn">sample artists</button>
+        <input type="number" class="num-samples" min="1"/>
+        <div class="strategies"></div>
+        <div class="sampled-artists sampled-list"></div>
+      </div>
+      <div class="song-sampler-section sampler">
+        <button class="sample-btn">sample tracks</button>
+        <input type="number" class="num-samples" min="1"/>
+        <div class="strategies"></div>
+        <div class="sampled-tracks sampled-list"></div>
       </div>
     </div>
-     <div class="row">
-         <div id="card-container" class="card-container">
-          <!-- Other static cards or elements -->
-        </div>
+  </template>
 
-    </div>
+  <template id="attribute-strategy-template">
+    <div class="strategy">
+      <label>
+        <input type="checkbox" class="enable-strategy">
+        <span class="strategy-name">[name]</span>
+      </label>
+      <input type="number" class="weight number-input" placeholder="Weight" step="0.1" min="0" max="1">
 
-    <div class="row">
-      <div class="right-panel">
-          <h1>Selected Artists</h1>
-          <div id="sampled-artists-panel"></div>
+      <div class="strategy-details">
+        <label>min:</label>
+        <input type="number" class="min-value number-input" min="0" max="1" step="0.0025">
+        <label>max:</label>
+        <input type="number" class="max-value number-input" min="0" max="1" step="0.005">
+        <button class="higher-is-better" style="grid-column: span 2;">minimize</button>
+        <label>mode:</label>
+        <select class="sampling-mode">
+          <option value="rank">rank</option>
+          <option value="softmax">softmax</option>
+          <option value="log">log</option>
+        </select>
+        <input type="range" min="0" max="100" step="0.01" class="alpha-slider" >
       </div>
-      <div id="left-sketch-2"></div>
-
     </div>
+  </template>
 
-    <div class="row">
-      <div class="album-artist-panel">
-          <div id="artist-panel"></div>
-          <div id="album-panel"></div>
-      </div>
-      <div class="settings-panel"></div>
-      <div class="playlist-panel">
-        <div id="playlist-container"></div>
-      </div>
-    </div>
-  </div>
-    <script src="../static/SessionManager.js" defer></script>
-    <script src="../static/GenreManager.js" defer></script>
-    <script src="../static/GenreCard.js" defer></script>
+  <script src="../static/SessionManager.js" defer></script>
+  <script src="../static/GenreManager.js" defer></script>
+  <script src="../static/GenreCard.js" defer></script>
 
-    <script src="../static/GenreMap.js" defer></script>
-    <script src="../static/GenreMap_sketch.js" defer></script>
+  <script src="../static/GenreMap.js" defer></script>
+  <script src="../static/GenreMap_sketch.js" defer></script>
 
-    <script src="../static/ArtistMap.js" defer></script>
-    <script type="module" src="../static/ArtistMap_sketch.js" defer></script>
+  <script src="../static/ArtistMap.js" defer></script>
+  <script type="module" src="../static/ArtistMap_sketch.js" defer></script>
 
-    <script src="../static/sendData.js" defer></script>
-<script src="../static/PlaylistView.js" defer></script>
-
-
+  <script src="../static/sendData.js" defer></script>
+  <script src="../static/PlaylistView.js" defer></script>
 </body>
 </html>

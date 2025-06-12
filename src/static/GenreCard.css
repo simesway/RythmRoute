@@ -14,3 +14,36 @@
     width: 20%;
     min-width: 0;
 }
+.strategies {
+    border: #3c3c3c;
+    padding: 10px;
+}
+.strategy {
+    padding: 5px;
+}
+
+.strategy-details {
+    display: none;
+    grid-template-columns: repeat(4, max-content);
+    gap: 2px 4px;
+    padding: 10px;
+}
+
+.number-input {
+    width: 4em;
+    min-width: 0;
+    align-self: end;
+}
+
+.alpha-slider {
+    grid-column: 1 / -1;
+    height: auto;
+    min-height: 0;
+}
+
+.sampled-list {
+    max-height: 8rem;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 8px;
+}
