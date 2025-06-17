@@ -30,12 +30,6 @@ class GenreCard {
     const content = card.querySelector(".card-content");
     header.style.cursor = "pointer";
     header.addEventListener("click", () => {
-      // Collapse all other card contents
-      document.querySelectorAll(".card-content").forEach(el => {
-        if (el !== content) el.style.display = "none";
-      });
-
-      // Toggle this one
       content.style.display = content.style.display === "none" ? "block" : "none";
     });
     // -----------------------
@@ -186,7 +180,18 @@ class GenreCard {
       filters: filters
     };
 
-    this.session.updateOnServer(payload, `/api/sample/artists/${this.genre.id}`);
+    const btn = container.querySelector(".sample-btn");
+    btn.innerText = "loading..."
+
+    this.session.updateOnServer(payload, `/api/sample/artists/${this.genre.id}`)
+    .then(() => {
+      btn.innerText = "sample artists";
+    })
+    .catch((error) => {
+      btn.innerText = "sample artists";
+      console.error("Update failed:", error);
+      // optionally show error to user
+    });
   }
 
   initSongSamplers(container) {
@@ -350,7 +355,17 @@ class GenreCard {
       sampler: { type: "combined", strategies: strategies, n_samples: limit}
     };
 
-    this.session.updateOnServer(payload, `/api/sample/tracks/${this.genre.id}`);
+    const btn = container.querySelector(".sample-btn");
+    btn.innerText = "loading...";
+
+    this.session.updateOnServer(payload, `/api/sample/tracks/${this.genre.id}`)
+    .then(() => {
+      btn.innerText = "sample tracks";
+    })
+    .catch((error) => {
+      btn.innerText = "sample tracks";
+      console.error("Update failed:", error);
+    });
   }
 
 
