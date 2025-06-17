@@ -23,7 +23,7 @@ class GenreManager {
     this.session.subscribe((state) => {
       this.update_genres(state);
     });
-    this.session.fetchState()
+    //this.session.fetchState()
   }
 
   has(genre_id) {

@@ -35,7 +35,7 @@ class GenreMap {
       this.update_graph(state.graph);
     });
 
-    this.session.fetchState();
+    //this.session.fetchState();
   }
 
   update(rate) {
