@@ -3,10 +3,16 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Any, Union, Literal
 import numpy as np
 import random
+import logging
+
+
+logger = logging.getLogger("ObjectSampling")
+logging.basicConfig(level=logging.INFO)
 
 ### FILTERING
 
 class Filter(BaseModel, ABC):
+  """Abstract base class for filters applied to item lists."""
   def __call__(self, items) -> list:
     return self.apply(items)
 
@@ -16,6 +22,7 @@ class Filter(BaseModel, ABC):
 
 
 class AttributeFilter(Filter):
+  """Filters items based on an attribute's min/max values."""
   attr: str
   min: Optional[float] = None
   max: Optional[float] = None
@@ -29,6 +36,7 @@ class AttributeFilter(Filter):
 
 
 class CombinedFilter(Filter):
+  """Combines multiple AttributeFilters sequentially."""
   filters: List[AttributeFilter]
 
   def apply(self, items: list):
@@ -41,6 +49,7 @@ FilterTypes = Union[AttributeFilter, CombinedFilter]
 ### SAMPLING
 
 class SamplingStrategy(BaseModel, ABC):
+  """Abstract base class for sampling strategies."""
   def __call__(self, items: List[Any], seed: Optional[int] = None) -> list:
     return self.apply(items, seed)
 
@@ -51,12 +60,14 @@ class SamplingStrategy(BaseModel, ABC):
 
 
 class RandomSampling(SamplingStrategy):
+  """Randomly selects one item."""
   def apply(self, items: List[Any], seed: Optional[int] = None) -> Any:
     if seed is not None:
       random.seed(seed)
     return random.choice(items)
 
 class WeightedSampling(SamplingStrategy):
+  """Samples one item based on provided weights."""
   weights: Optional[List[float]] = None
 
   def apply(self, items: List[Any], seed: Optional[int] = None) -> Any:
@@ -66,6 +77,7 @@ class WeightedSampling(SamplingStrategy):
 
 
 class AttributeWeightedSampling(SamplingStrategy):
+  """Samples items using attribute-based weights."""
   attr: str
   higher_is_better: bool
   alpha: float = 1.0
@@ -78,6 +90,7 @@ class AttributeWeightedSampling(SamplingStrategy):
       items, w = self.softmax(items)
     else:
       items, w = self.rank_based(items)
+    logger.warning("Weights sum to zero; falling back to random choice.")
     return random.choices(items, weights=w, k=1)[0] if sum(w) > 0 else random.choice(items)
 
   def log(self, items):
@@ -118,6 +131,7 @@ SamplingStrategyType = Union[
 ]
 
 class WeightedCombinedSampler(SamplingStrategy):
+  """Combines multiple AttributeWeightedSamplers with weights."""
   samplers: List[AttributeWeightedSampling]
   weights: Optional[List[float]] = None
   n_samples: int = 1
@@ -125,6 +139,7 @@ class WeightedCombinedSampler(SamplingStrategy):
   def apply(self, items: List[Any], seed: Optional[int] = None) -> List[Any]:
     if seed is not None:
       random.seed(seed)
+    logger.info(f"Combined sampling from {len(self.samplers)} samplers.")
 
     n = len(items)
     combined_weights = np.zeros(n)
@@ -163,6 +178,7 @@ class WeightedCombinedSampler(SamplingStrategy):
 
     n = min(self.n_samples, len(items))
     if np.sum(combined_weights) == 0:
+      logger.warning("Combined weights sum to zero; falling back to random sample.")
       return random.sample(items, n)
     else:
       probs = combined_weights / np.sum(combined_weights)
@@ -171,5 +187,6 @@ class WeightedCombinedSampler(SamplingStrategy):
 
 
 class SamplingConfig(BaseModel):
+  """Configuration for sampling with optional filters and a sampler."""
   filters: Optional[List[AttributeFilter]] = Field(default_factory=list)
   sampler: WeightedCombinedSampler

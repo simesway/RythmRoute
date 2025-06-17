@@ -1,4 +1,3 @@
-import time
 import logging
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth, SpotifyOauthError
@@ -6,7 +5,8 @@ from spotipy.cache_handler import CacheHandler, RedisCacheHandler
 from src.core.redis_client import redis_sync
 from src.config import SPOTIPY_CLIENT_ID,  SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, SPOTIPY_SCOPE, SESSION_USER_EXPIRE_TIME
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("SpotifyClient")
+logging.basicConfig(level=logging.INFO)
 
 
 class NoCacheHandler(CacheHandler):

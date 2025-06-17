@@ -11,18 +11,25 @@ from src.core.GenreGraph import GenreGraph
 from src.core.SpotifyCache import Track
 
 
+logger = logging.getLogger("PlaylistFactory")
+logging.basicConfig(level=logging.INFO)
+
+
 class SampledArtists(BaseModel):
+  """Holds sampled artist data for a genre."""
   filters: Optional[List[AttributeFilter]] = None
   sampler: Optional[WeightedCombinedSampler] = None
   sampled: Set[int] = Field(default_factory=set)
 
 
 class SampledTracks(BaseModel):
+  """Holds sampled track data for a genre."""
   sampler: Optional[CombinedSamplerConfig] = None
   sampled: Set[Track] = Field(default_factory=set)
 
 
 class UserGenre(BaseModel):
+  """User-selected genre with sampling state."""
   id: int
   name: str
   selected: bool = False
@@ -32,6 +39,8 @@ class UserGenre(BaseModel):
 
 
 class PlaylistFactory(BaseModel):
+  """Factory managing genres, artist sampling, track sampling, and playlist creation."""
+
   genres: Dict[int, UserGenre] = Field(default_factory=dict)
   playlist: Optional[PlaylistEditor] = None
 
@@ -53,7 +62,7 @@ class PlaylistFactory(BaseModel):
       del self.genres[genre_id]
 
   def has(self, genre_id: int) -> bool:
-    return genre_id in  self.genres
+    return genre_id in self.genres
 
   def toggle_genre(self, genre_id: int):
     if genre_id in self.genres:
@@ -62,9 +71,11 @@ class PlaylistFactory(BaseModel):
       self.add_genre(genre_id)
 
   def toggle_expand(self, genre_id: int):
+    """Toggle expanded state of a genre."""
     self.genres[genre_id].expanded = not self.genres[genre_id].expanded
 
   def toggle_select(self, genre_id: int):
+    """Toggle selected state of a genre."""
     self.genres[genre_id].selected = not self.genres[genre_id].selected
 
   def collapse_all(self):
@@ -72,9 +83,11 @@ class PlaylistFactory(BaseModel):
       genre.expanded = False
 
   def clear(self):
+    """Clear all genres."""
     self.genres.clear()
 
   def remove_unexplored(self):
+    """Remove genres that are neither selected, expanded, nor sampled."""
     to_remove = [
       g_id for g_id, genre in self.genres.items()
       if not genre.expanded and not genre.selected and genre.artists is None and genre.tracks is None
@@ -83,6 +96,7 @@ class PlaylistFactory(BaseModel):
       self.remove_genre(g_id)
 
   def reset(self, genre_id: int, mode: Literal["all", "artists", "tracks"]):
+    """Reset genre, artist, or track data for a genre."""
     if mode == "all":
       self.add_genre(genre_id)
     elif mode == "artists":
@@ -91,7 +105,8 @@ class PlaylistFactory(BaseModel):
       self.genres[genre_id].tracks = None
 
   def sample_artists(self, genre_id: int, config: SamplingConfig, reset: bool=True):
-    logging.info(f"Sampling Artists: {genre_id}")
+    """Sample artists for a genre with given SamplingConfig."""
+    logger.info(f"Sampling Artists: {genre_id}")
     if genre_id not in self.genres:
       self.add_genre(genre_id)
 
@@ -113,12 +128,14 @@ class PlaylistFactory(BaseModel):
     genre.artists.sampled.update(artist_ids)
 
   def sampled_artists(self, genre_id: Optional[int] = None) -> Dict[int, list]:
+    """Return sampled artist IDs for selected genres (or specific genre)."""
     if genre_id and self.genres[genre_id].selected:
       return {genre_id: list(self.genres[genre_id].artists.sampled)}
     return {genre.id: list(genre.artists.sampled) for genre in self.genres.values() if genre.selected and genre.artists}
 
   def sample_tracks(self, genre_id: int, sampler_config: SongSamplerConfig, reset: bool=True):
-    logging.info(f"Sampling Tracks: {genre_id}")
+    """Sample tracks for a genre with given SongSamplerConfig config."""
+    logger.info(f"Sampling Tracks: {genre_id}")
     genre: UserGenre = self.genres[genre_id]
 
     if genre.tracks is None:
@@ -137,12 +154,14 @@ class PlaylistFactory(BaseModel):
     genre.tracks.sampled.update(tracks)
 
   def sampled_tracks(self, genre_id: Optional[int] = None) -> Set[Track]:
+    """Return sampled tracks for selected genres (or specific genre)."""
     sampled_genres = [genre for genre in self.genres.values() if genre.selected and genre.tracks]
     if genre_id and self.genres[genre_id].selected:
       return set(track for track in self.genres[genre_id].tracks.sampled)
     return set(track for genre in sampled_genres for track in genre.tracks.sampled)
 
   def create_playlist(self, sp: Spotify, name: str):
+    """Create a new playlist if not existing."""
     if isinstance(self.playlist, PlaylistEditor) and self.playlist.id:
       return
     playlist = PlaylistEditor(name=name).set_spotify(sp)
@@ -150,6 +169,7 @@ class PlaylistFactory(BaseModel):
     self.playlist = playlist
 
   def rebuild_playlist(self):
+    """Sync Spotify playlist with sampled tracks."""
     track_set = set(self.playlist.tracks)
     sampled_tracks = self.sampled_tracks()
 
@@ -157,9 +177,11 @@ class PlaylistFactory(BaseModel):
     self.playlist.add_tracks(sampled_tracks - track_set)
 
   def reorder_playlist(self):
+    logger.warning("Reordering Playlist not implemented.")
     pass # TODO
 
   def update_playlist(self):
-    logging.info(f"Updating Playlist: {self.playlist.id}")
+    """Update playlist to match sampled tracks and apply ordering."""
+    logger.info(f"Updating Playlist: {self.playlist.id}")
     self.rebuild_playlist()
     self.reorder_playlist()
