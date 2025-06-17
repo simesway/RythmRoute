@@ -7,7 +7,10 @@ class PlaylistManager {
     this.trackList = document.createElement('ul');
     this.container.appendChild(this.trackList);
     this.user = null;
-    this.current_state();
+    (async () => {
+      await this.session.fetchState();
+      await this.current_state();
+    })();
   }
 
   loginUI(container){
