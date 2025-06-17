@@ -4,8 +4,7 @@ from fastapi.responses import JSONResponse
 from src.models.ObjectSampling import SamplingConfig
 from src.models.SongSampler import CombinedSamplerConfig, StrategyWeightPair, RandomReleaseConfig
 from src.models.create_SessionResponse import create_SessionResponse
-from src.models.SessionData import SessionData
-from src.core.session_manager import get_session, store_session
+from src.core.session_manager import get_session, store_session, SessionData
 
 router = APIRouter(prefix="/sample", default_response_class=JSONResponse)
 

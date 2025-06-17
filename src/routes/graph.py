@@ -3,9 +3,8 @@ from fastapi.responses import JSONResponse
 
 from src.models.clientData import GraphUpdate
 from src.models.create_SessionResponse import create_SessionResponse
-from src.models.SessionData import SessionData
 from src.core.GenreGraph import GenreGraph
-from src.core.session_manager import get_session, store_session
+from src.core.session_manager import get_session, store_session, SessionData
 
 router = APIRouter(prefix="/graph", default_response_class=JSONResponse)
 

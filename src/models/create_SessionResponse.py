@@ -2,7 +2,7 @@ from src.core.SpotifyCache import SpotifyCache
 from src.models.ArtistHandler import ArtistHandler
 from src.models.GenreDisplayStrategy import StartingGenresStrategy
 from src.models.SessionResponse import SessionResponse, ArtistMapData, GenreGraphData, GenreData, GenreSelectionData
-from src.models.SessionData import SessionData
+from src.core.session_manager import SessionData
 
 
 async def create_SessionResponse(session: SessionData) -> SessionResponse:

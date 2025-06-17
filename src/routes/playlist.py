@@ -2,10 +2,7 @@ from fastapi import APIRouter, Request, Depends
 from fastapi.responses import JSONResponse
 
 from src.models.PlaylistEditor import PlaylistEditor
-from src.models.SessionData import SessionData
-from src.models.SongSampler import TopSongsConfig
-
-from src.core.session_manager import get_session, store_session
+from src.core.session_manager import get_session, store_session, SessionData
 from src.core.spotify_client import SpotifyUserClient
 
 router = APIRouter(prefix="/playlist", default_response_class=JSONResponse)

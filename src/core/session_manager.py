@@ -1,15 +1,15 @@
-from json import JSONDecodeError
-
 import uuid
 import json
 import logging
+from json import JSONDecodeError
 from fastapi import Request, Response
+from pydantic import BaseModel, Field
 from typing import Optional
 
 from src.config import SESSION_USER_EXPIRE_TIME
 from src.core.redis_client import redis_client
-from src.models.SessionData import SessionData
-
+from src.models.PlaylistEditor import PlaylistEditor
+from src.models.PlaylistFactory import PlaylistFactory
 
 logger = logging.getLogger("SessionManager")
 logger.setLevel(logging.DEBUG)
@@ -22,6 +22,12 @@ COOKIE_PARAMS = dict(
     samesite="Lax",
     max_age=SESSION_USER_EXPIRE_TIME,
 )
+
+
+class SessionData(BaseModel):
+  id: str
+  factory: PlaylistFactory = Field(default_factory=PlaylistFactory)
+  playlist: Optional[PlaylistEditor] = None
 
 
 async def refresh_ttl_and_cookie(session_id: str, response: Response):

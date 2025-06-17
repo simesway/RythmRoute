@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Request, HTTPException, Response, Depends
 import uuid
 from src.config import SESSION_USER_EXPIRE_TIME, SESSION_COOKIE_NAME
-from src.models.SessionData import SessionData
-from src.core.session_manager import store_session, get_session, delete_session
+from src.core.session_manager import store_session, get_session, delete_session, SessionData
 
 router = APIRouter(prefix="/session")
 

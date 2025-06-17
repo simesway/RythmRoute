@@ -3,9 +3,8 @@ from fastapi.responses import JSONResponse
 
 from src.models.ObjectSampling import AttributeWeightedSampling
 from src.models.create_SessionResponse import create_SessionResponse
-from src.models.SessionData import SessionData
 from src.core.SpotifyCache import SpotifyCache
-from src.core.session_manager import get_session, store_session
+from src.core.session_manager import get_session, store_session, SessionData
 
 router = APIRouter(prefix="/artists", default_response_class=JSONResponse)
 

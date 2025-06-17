@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse
-from src.models.SessionData import SessionData
-from src.core.session_manager import get_session
+from src.core.session_manager import get_session, SessionData
 
 from src.core.spotify_client import SpotifyUserClient
 
