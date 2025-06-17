@@ -1,6 +1,8 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import HTMLResponse
 import logging
+
+from src.core.session_manager import get_session
 
 logging.basicConfig(
     level=logging.INFO,
@@ -9,7 +11,7 @@ logging.basicConfig(
 router = APIRouter()
 
 @router.get("/", response_class=HTMLResponse)
-def home():
+def home(session=Depends(get_session)):
     with open("src/templates/home.html") as f:
         return f.read()
 
