@@ -38,14 +38,20 @@ class SessionManager {
   }
 
   updateOnServer(partialUpdate, route) {
-    fetch(route, {
+    return fetch(route, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(partialUpdate)
     })
       .then(res => res.json())
-      .then(data => this.updateFromServer(data))
-      .catch(err => console.error('Session update failed:', err));
+      .then(data => {
+        this.updateFromServer(data);
+        return data; // allow further chaining
+      })
+      .catch(err => {
+        console.error('Session update failed:', err);
+        throw err; // propagate error
+      });
   }
 }
 
