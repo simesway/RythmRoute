@@ -201,114 +201,52 @@ class GenreCard {
     const savedSampler = savedConfig ? savedConfig.sampler : null;
     const savedStrats = savedSampler && savedSampler.strategies.length > 0 ? savedSampler.strategies : null;
 
-    const submitBtn = document.createElement('button');
-    submitBtn.style.width = "70%"
-    submitBtn.style.padding = "2px"
-    submitBtn.innerText = "sample songs";
+    const submitBtn = container.querySelector(".sample-btn");
     submitBtn.onclick = () => this.sendSongSamplerConfig(container);
-    container.appendChild(submitBtn);
 
-    const lInput = document.createElement('input');
-    lInput.type = 'number';
-    lInput.className = 'track-limit';
+    const lInput = container.querySelector(".num-samples");
     lInput.value = savedSampler ? savedSampler.n_samples : '1';
-    lInput.min = "1";
-    lInput.style.padding = "0px"
-    lInput.style.margin = "2px"
-    lInput.style.width = '20%';
-    lInput.style.minWidth = '0';
-    container.appendChild(lInput);
 
-    const strategies = [
-      { type: "top_songs", label: "Top Songs", details: null },
-      { type: "random_release", label: "Random Release", details: null },
-      {
-        type: "album_cluster", label: "Album Cluster", details: (parent) => {
-          const strategyConfig = savedStrats ? savedStrats.find(strat => strat.strategy.type === "album_cluster") || null : null;
+    const strats = container.querySelector(".strategies");
+    const tmpl = document.getElementById("song-sampler-template");
+    const node = tmpl.content.cloneNode(true);
+    strats.appendChild(node);
 
-          const core_only = strategyConfig ? strategyConfig.strategy.core_only : false;
-          const checkbox = document.createElement('input');
-          checkbox.type = 'checkbox';
-          checkbox.className = 'core-only';
-          checkbox.checked = strategyConfig ? strategyConfig.strategy.core_only : true;
-          console.log(core_only, checkbox.checked)
-          parent.appendChild(document.createTextNode("Core only "));
-          parent.appendChild(checkbox);
+    container.querySelectorAll(".strategy").forEach(strategy => {
+      const type = strategy.dataset.type;
+      const strategyConfig = savedStrats.find(s => s.strategy.type === type) || null;
+      console.log(type, strategyConfig)
 
-          const grid = document.createElement('div');
-          grid.style.display = 'grid';
-          grid.style.gridTemplateColumns = 'repeat(2, auto)';
-          grid.style.padding = '5px';
+      const enable = strategy.querySelector('.enable-strategy');
+      const weight = strategy.querySelector('.weight');
+      const details = strategy.querySelector('.strategy-details');
 
-          ['album', 'single', 'ep', 'compilation'].forEach((label, i) => {
-            const cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.id = `option${i}`;
-            cb.value = label;
-            cb.checked = strategyConfig ? strategyConfig.strategy.exclude_types.includes(label) : false;
-
-            const cbLabel = document.createElement('label');
-            cbLabel.htmlFor = cb.id;
-            cbLabel.textContent = label;
-
-            const wrapper = document.createElement('div');
-            wrapper.appendChild(cb);
-            wrapper.appendChild(cbLabel);
-
-            grid.appendChild(wrapper);
-          });
-          parent.innerHTML += "<br>";
-          parent.appendChild(document.createTextNode("Exclude types:"));
-          parent.appendChild(grid);
-
-        }
-      },
-      {
-        type: "nearest_release_date", label: "Nearest Release", details: (parent) => {
-          parent.innerHTML = `
-            Target date: <input type="text" class="target-date" placeholder="YYYY or YYYY-MM or YYYY-MM-DD" /><br>
-            Sigma days: <input type="number" class="sigma-days" min="0" value="180"/><br>
-            <label><input type="checkbox" class="core-only" checked /> Core only</label>
-          `;
-        }
+      if (strategyConfig) {
+        enable.checked = true;
+        weight.value = strategyConfig.weight;
+        details.style.display = 'block';
       }
-    ];
 
-    strategies.forEach(s => {
-      const strategyConfig = savedStrats ? savedStrats.find(strat => strat.strategy.type === s.type) || null : null;
-
-      const wrapper = document.createElement('div');
-      wrapper.className = 'strategy';
-      wrapper.dataset.type = s.type;
-
-      wrapper.innerHTML = `
-        <label><input type="checkbox" class="enable-strategy" ${strategyConfig ? "checked":""}/> ${s.label}</label>
-        <input type="number" class="weight" placeholder="Weight" step="0.1" min="0" max="10" value="${strategyConfig ? strategyConfig.weight : "0.1"}"/>
-      `;
-
-      const detailPanel = document.createElement('div');
-      detailPanel.className = 'details';
-      detailPanel.style.display = strategyConfig ? 'block' : 'none';
-
-      if (s.details) s.details(detailPanel);
-      wrapper.appendChild(detailPanel);
-
-      wrapper.querySelector('.enable-strategy').addEventListener('change', (e) => {
-        detailPanel.style.display = e.target.checked ? 'block' : 'none';
+      enable.addEventListener('change', e => {
+        details.style.display = e.target.checked ? 'block' : 'none';
       });
 
-      container.appendChild(wrapper);
+      if (type === "album_cluster" && strategyConfig) {
+        strategy.querySelector('.core-only').checked = strategyConfig.strategy.core_only;
+        const excludes = strategyConfig.strategy.exclude_types || [];
+        strategy.querySelectorAll('.type-grid input').forEach(cb => {
+          cb.checked = excludes.includes(cb.value);
+        });
+      }
+
+      if (type === "nearest_release_date" && strategyConfig) {
+        strategy.querySelector('.target-date').value = strategyConfig.strategy.target_date || "";
+        strategy.querySelector('.sigma-days').value = strategyConfig.strategy.sigma_days || 180;
+        strategy.querySelector('.core-only').checked = strategyConfig.strategy.core_only;
+      }
     });
 
-    const trackList = document.createElement('div');
-    trackList.id = `${this.genre.id}-sampled-tracks`
-    trackList.className = 'sampled-artists';
-    trackList.style.maxHeight = '8rem';
-    trackList.style.overflowY = 'auto';
-    trackList.style.border = '1px solid #ccc';
-    trackList.style.padding = '8px';
-
-    container.appendChild(trackList);
+    container.querySelector('.sampled-tracks').id = `${this.genre.id}-sampled-tracks`;
   }
 
   sendSongSamplerConfig(container) {
@@ -348,7 +286,7 @@ class GenreCard {
       strategies.push({ strategy: config, weight: weight });
     });
 
-    const limit = container.querySelector(".track-limit").value;
+    const limit = container.querySelector(".num-samples").value;
 
     const payload = {
       genre: this.genre.id,

@@ -44,6 +44,7 @@
     padding: 10px;
 }
 .strategy {
+    border: 1px solid #333333;
     padding: 5px;
 }
 
@@ -51,7 +52,12 @@
     display: none;
     grid-template-columns: repeat(4, max-content);
     gap: 2px 4px;
-    padding: 10px;
+    padding: 5px;
+}
+
+.strategy-description {
+    font-style: italic;
+    font-size: 0.8em;
 }
 
 .number-input {
@@ -71,4 +77,14 @@
     overflow-y: auto;
     border: 1px solid #ccc;
     padding: 8px;
+}
+
+.type-grid {
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    padding: 5px;
+}
+
+.clickable {
+    cursor: pointer;
 }

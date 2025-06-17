@@ -107,13 +107,12 @@
 				<div class="sampled-tracks sampled-list"></div>
 			</div>
 		</div>
-
 	</div>
 </template>
 
 <template id="attribute-strategy-template">
 	<div class="strategy">
-		<label>
+		<label class="clickable">
 			<input type="checkbox" class="enable-strategy">
 			<span class="strategy-name">[name]</span>
 		</label>
@@ -134,6 +133,51 @@
 			<input type="range" min="0" max="100" step="0.01" class="alpha-slider" >
 		</div>
 	</div>
+</template>
+
+<template id="song-sampler-template">
+	<div class="strategy" data-type="top_songs">
+    <label><input type="checkbox" class="enable-strategy"> Top Songs</label>
+    <input type="number" class="weight" placeholder="Weight" step="0.1" min="0" max="10" value="0.1">
+    <div class="strategy-details">
+	    <div class="strategy-description">Picks from the most popular tracks by the sampled artist(s).</div>
+    </div>
+  </div>
+
+  <div class="strategy" data-type="random_release">
+    <label><input type="checkbox" class="enable-strategy"> Random Release</label>
+    <input type="number" class="weight" placeholder="Weight" step="0.1" min="0" max="10" value="0.1">
+    <div class="strategy-details">
+	    <div class="strategy-description">Picks random tracks from random releases.</div>
+    </div>
+  </div>
+
+  <div class="strategy" data-type="album_cluster">
+    <label><input type="checkbox" class="enable-strategy"> Album Cluster</label>
+    <input type="number" class="weight" placeholder="Weight" step="0.1" min="0" max="10" value="0.1">
+    <div class="strategy-details">
+	    <div class="strategy-description">Picks tracks from releases grouped by type, optionally skipping non-core tracks.</div>
+      Core only <input type="checkbox" class="core-only" checked>
+      <br>Exclude types:
+      <div class="type-grid">
+        <div><input type="checkbox" value="album" id="option0"><label for="option0">album</label></div>
+        <div><input type="checkbox" value="single" id="option1"><label for="option1">single</label></div>
+        <div><input type="checkbox" value="ep" id="option2"><label for="option2">ep</label></div>
+        <div><input type="checkbox" value="compilation" id="option3"><label for="option3">compilation</label></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="strategy" data-type="nearest_release_date">
+    <label><input type="checkbox" class="enable-strategy"> Nearest Release</label>
+    <input type="number" class="weight" placeholder="Weight" step="0.1" min="0" max="10" value="0.1">
+    <div class="strategy-details">
+	    <div class="strategy-description">Picks tracks released closest to a specific date.</div>
+      Target date: <input type="text" class="target-date" placeholder="YYYY or YYYY-MM or YYYY-MM-DD"><br>
+      Sigma days: <input type="number" class="sigma-days" min="0" value="180"><br>
+      <label><input type="checkbox" class="core-only" checked> Core only</label>
+    </div>
+  </div>
 </template>
 
 <script src="../static/SessionManager.js" defer></script>
