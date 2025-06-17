@@ -58,205 +58,155 @@ class ArtistPool  {
 
 class ArtistMap {
   constructor(p) {
-    console.log("ArtistMap init")
+    console.log("ArtistMap init");
     this.p = p;
     this.session = session;
     this.genres = genre_manager;
 
-    this.pools = []
-    this.b_min = 0;
-    this.b_max = 1;
-    this.o_min = 0;
-    this.o_max = 1;
-
-    this.alpha = 0.1;
+    this.pools = [];
+    this.alpha = 0.2;
 
     this.electric_color = p.color(255);
     this.organic_color = p.color(0, 255, 0);
     this.atmospheric_color = p.color(0, 0, 120);
     this.bouncy_color = p.color('#FE9000');
 
-    this.sampledPanel = document.getElementById("sampled-artists-panel");
-
     this.draw_dot = false;
 
-    this.session.subscribe((state) => {
-      this.update_graph_from_session(state.artists);
-    });
-    this.session.fetchState()
+    this.session.subscribe(state => this.update_graph_from_session(state));
+    //this.session.fetchState();
   }
 
   update_graph_from_session(data) {
-    const { pools: pools, sampled: sampled_dict } = data;
+    const { pools, sampled } = data.artists;
+    if (!pools?.length) return;
 
-    if (!pools || pools.length === 0) {
+    this.pools = pools.map(pool => new ArtistPool(pool, sampled[pool.genre_id]));
+    this.updateMinMax();
+    this.render_sampled_artists(data);
+  }
+
+  updateMinMax() {
+    let visiblePools = this.pools.filter(pool => {
+      const card = document.getElementById(`genre:${pool.genre_id}`);
+      return card?.querySelector(".card-content")?.style.display !== "none";
+    });
+
+    if (!visiblePools.length) {
+      this.b_min = this.b_max = this.o_min = this.o_max = 0;
       return;
     }
 
-    this.pools = [];
-
-    for (let pool of pools) {
-      let sampled = sampled_dict[pool.genre_id]
-      console.log(sampled)
-      this.pools.push(new ArtistPool(pool, sampled));
-    }
-
-    let b_values = this.pools.map(pool => pool.bouncyness);
-    let o_values = this.pools.map(pool => pool.organicness);
-
-    this.b_min = Math.min(...b_values);
-    this.b_max = Math.max(...b_values);
-
-    this.o_min = Math.min(...o_values);
-    this.o_max = Math.max(...o_values);
-
-    this.render_sampled_artists();
+    this.b_min = Math.min(...visiblePools.map(p => p.bouncyness));
+    this.b_max = Math.max(...visiblePools.map(p => p.bouncyness));
+    this.o_min = Math.min(...visiblePools.map(p => p.organicness));
+    this.o_max = Math.max(...visiblePools.map(p => p.organicness));
   }
 
-  render_sampled_artists() {
-    this.sampledPanel.innerHTML = "";
-
+  render_sampled_artists(data) {
     for (let pool of this.pools) {
-      const pool_div = document.createElement("div");
-      const header = document.createElement("h3");
-      header.innerText = pool.name;
+      const sampled_artists = data.factory.genres[pool.genre_id]?.artists?.sampled || [];
+      const panel = document.getElementById(`${pool.genre_id}-sampled-artists`);
+      if (!panel) continue;
 
-      const artist_list = document.createElement("ul");
-      for (let artist of pool.artists.filter(artist => pool.sampled.includes(Number(artist.id)))) {
-        let artist_name = artist.name;
-        const artist_li = document.createElement("li");
-        artist_li.innerText = artist_name;
-        artist_list.appendChild(artist_li);
+      panel.innerHTML = "";
+      const filtered = pool.artists
+        .filter(a => sampled_artists.includes(Number(a.id)))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      for (let artist of filtered) {
+        const el = document.createElement("div");
+        el.textContent = artist.name;
+        panel.appendChild(el);
       }
-
-      pool_div.appendChild(header);
-      pool_div.appendChild(artist_list);
-      this.sampledPanel.appendChild(pool_div);
     }
+  }
+
+  scale(v, inMin, inMax, outMin, outMax) {
+    if (inMax === inMin) return outMin;
+    return ((v - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin;
   }
 
   draw_legend() {
-    let w = this.p.width;
-    let h = this.p.height;
-    let pad = 100;
+    const { width: w, height: h } = this.p;
+    const pad = 100;
     this.p.textAlign(this.p.CENTER, this.p.CENTER);
     this.p.textSize(30);
     this.p.noStroke();
-    this.p.fill(this.electric_color);
-    this.p.text("electric", w/2, pad);
-    this.p.fill(this.organic_color);
-    this.p.text("organic", w/2, h-pad);
-    this.p.fill(this.atmospheric_color);
-    this.p.text("atmospheric", pad, h/2);
-    this.p.fill(this.bouncy_color);
-    this.p.text("bouncy", w-pad, h/2);
-  }
 
-  normalize(value, min, max) {
-    if (max === min) return 0; // or 1, depending on your use case
-    return (value - min) / (max - min);
-  }
-
-  scale(value, inMin, inMax, outMin, outMax) {
-    return ((value - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin;
+    this.p.fill(this.electric_color); this.p.text("electric", w/2, pad);
+    this.p.fill(this.organic_color); this.p.text("organic", w/2, h - pad);
+    this.p.fill(this.atmospheric_color); this.p.text("atmospheric", pad, h/2);
+    this.p.fill(this.bouncy_color); this.p.text("bouncy", w - pad, h/2);
   }
 
   draw() {
-    this.draw_legend()
-    if (!this.pools || this.pools.length === 0)  return;
+    this.draw_legend();
+    if (!this.pools.length) return;
 
-    let hovered = null;
-    let hovered_pool = null;
+    this.updateMinMax();
 
-    let pad = 64;
-    let w = this.p.width - 2 * pad;
-    let h = this.p.height - 2 * pad;
+    const pad = 64;
+    const w = this.p.width - 2 * pad;
+    const h = this.p.height - 2 * pad;
+    const alpha = this.alpha;
+    const b_min = this.b_min - alpha / 2;
+    const b_max = this.b_max + alpha / 2;
+    const o_min = this.o_min - alpha / 2;
+    const o_max = this.o_max + alpha / 2;
 
-    let alpha = this.alpha;
-    let b_min = this.b_min - alpha/2;
-    let b_max = this.b_max + alpha/2;
-    let o_min = this.o_min - alpha/2;
-    let o_max = this.o_max + alpha/2;
-
-    this.p.stroke(0);
-    this.p.strokeWeight(1);
-    this.p.noFill();
+    this.p.stroke(0); this.p.strokeWeight(1); this.p.noFill();
     this.p.rect(pad, pad, w, h);
 
-    let x1 = this.scale(0, b_min, b_max, 0, this.p.width);
-    let xh = this.scale(0.5, b_min, b_max, 0, this.p.width);
-    let x2 = this.scale(1, b_min, b_max, 0, this.p.width);
-    let y1 = this.scale(0, o_min, o_max, 0, this.p.height);
-    let yh = this.scale(0.5, o_min, o_max, 0, this.p.height);
-    let y2 = this.scale(1, o_min, o_max, 0, this.p.height);
-
     this.p.strokeWeight(3);
-    this.p.stroke(0);
-    this.p.line(x1, yh, x2, yh);
-    this.p.line(xh, y1, xh, y2);
+    this.p.line(this.scale(0, b_min, b_max, 0, this.p.width), this.scale(0.5, o_min, o_max, 0, this.p.height),
+                this.scale(1, b_min, b_max, 0, this.p.width), this.scale(0.5, o_min, o_max, 0, this.p.height));
+    this.p.line(this.scale(0.5, b_min, b_max, 0, this.p.width), this.scale(0, o_min, o_max, 0, this.p.height),
+                this.scale(0.5, b_min, b_max, 0, this.p.width), this.scale(1, o_min, o_max, 0, this.p.height));
 
-
+    let hovered = null, hovered_pool = null;
 
     for (let pool of this.pools) {
-      let bouncy_color = this.p.lerpColor(this.atmospheric_color, this.bouncy_color, pool.bouncyness);
-      let organic_color = this.p.lerpColor(this.electric_color, this.organic_color, pool.organicness);
+      const card = document.getElementById(`genre:${pool.genre_id}`);
+      if (!card?.querySelector(".card-content") || card.querySelector(".card-content").style.display === "none") continue;
+
       for (let artist of pool.artists) {
-        if (pool.sampled.includes(Number(artist.id))) {
-          bouncy_color = this.p.color(255, 0, 0);
-          organic_color = this.p.color(255);
-        } else {
-          bouncy_color = this.p.lerpColor(this.atmospheric_color, this.bouncy_color, pool.bouncyness);
-          organic_color = this.p.lerpColor(this.electric_color, this.organic_color, pool.organicness);
-        }
-        let adj_bouncyness = pool.bouncyness + alpha * (artist.bouncyness - 0.5);
-        let adj_organicness = pool.organicness + alpha * (artist.organicness - 0.5);
-        let artist_x = this.scale(adj_bouncyness, b_min, b_max, 0, w) + pad;
-        let artist_y = this.scale(adj_organicness, o_min, o_max, 0, h) + pad;
-        let d = this.p.dist(this.p.mouseX, this.p.mouseY, artist_x, artist_y);
-        let R = 8 + artist.popularity / 5;
-        if (d < R) hovered = artist;
-        if (d < R) hovered_pool = pool;
-        if (this.draw_dot) {
-          artist.draw_dot(this.p, artist_x, artist_y, organic_color, bouncy_color);
-        } else {
-          artist.draw(this.p, artist_x, artist_y, organic_color, bouncy_color);
-        }
+        const adj_b = pool.bouncyness + alpha * (artist.bouncyness - 0.5);
+        const adj_o = pool.organicness + alpha * (artist.organicness - 0.5);
+        const x = this.scale(adj_b, b_min, b_max, 0, w) + pad;
+        const y = this.scale(adj_o, o_min, o_max, 0, h) + pad;
+        const d = this.p.dist(this.p.mouseX, this.p.mouseY, x, y);
+        const R = 8 + artist.popularity / 5;
+        if (d < R) [hovered, hovered_pool] = [artist, pool];
+        const color_b = pool.sampled.includes(Number(artist.id)) ? this.p.color(255,0,0) : this.p.lerpColor(this.atmospheric_color, this.bouncy_color, pool.bouncyness);
+        const color_o = pool.sampled.includes(Number(artist.id)) ? this.p.color(255) : this.p.lerpColor(this.electric_color, this.organic_color, pool.organicness);
+        this.draw_dot ? artist.draw_dot(this.p, x, y, color_o, color_b) : artist.draw(this.p, x, y, color_o, color_b);
+      }
+    }
 
-      }
-    }
     for (let pool of this.pools) {
-      let pool_x = this.scale(pool.bouncyness, b_min, b_max, 0, w) + pad;
-      let pool_y = this.scale(pool.organicness, o_min, o_max, 0, h) + pad;
-      pool.draw(this.p, pool_x, pool_y);
+      const x = this.scale(pool.bouncyness, b_min, b_max, 0, w) + pad;
+      const y = this.scale(pool.organicness, o_min, o_max, 0, h) + pad;
+      pool.draw(this.p, x, y);
     }
+
     if (hovered) {
-      let bouncy_color = this.p.lerpColor(this.atmospheric_color, this.bouncy_color, hovered_pool.bouncyness);
-      let organic_color = this.p.lerpColor(this.electric_color, this.organic_color, hovered_pool.organicness);
-      let adj_bouncyness = hovered_pool.bouncyness + alpha * (hovered.bouncyness - 0.5);
-        let adj_organicness = hovered_pool.organicness + alpha * (hovered.organicness - 0.5);
-        let artist_x = this.scale(adj_bouncyness, b_min, b_max, 0, w) + pad;
-        let artist_y = this.scale(adj_organicness, o_min, o_max, 0, h) + pad;
-      if (this.draw_dot) {
-          hovered.draw_dot(this.p, artist_x, artist_y, organic_color, bouncy_color);
-      } else {
-          hovered.draw(this.p, artist_x, artist_y, organic_color, bouncy_color);
-      }
-  }
+      const adj_b = hovered_pool.bouncyness + alpha * (hovered.bouncyness - 0.5);
+      const adj_o = hovered_pool.organicness + alpha * (hovered.organicness - 0.5);
+      const x = this.scale(adj_b, b_min, b_max, 0, w) + pad;
+      const y = this.scale(adj_o, o_min, o_max, 0, h) + pad;
+      const color_b = this.p.lerpColor(this.atmospheric_color, this.bouncy_color, hovered_pool.bouncyness);
+      const color_o = this.p.lerpColor(this.electric_color, this.organic_color, hovered_pool.organicness);
+      this.draw_dot ? hovered.draw_dot(this.p, x, y, color_o, color_b) : hovered.draw(this.p, x, y, color_o, color_b);
+    }
   }
 
   keyPressed() {
-    let keyCode = this.p.keyCode;
-    let key = this.p.key;
-    if (keyCode === this.p.RIGHT_ARROW) { // Check if the "X" key is pressed
-      this.alpha = this.p.lerp(this.alpha, 0.5, 0.05);
-    }
-    if (keyCode === this.p.LEFT_ARROW) { // Check if the "X" key is pressed
-      this.alpha = this.p.lerp(this.alpha, 0.001, 0.05);
-    }
-    if (key === "d") { // Check if the "X" key is pressed
-      this.draw_dot = !this.draw_dot;
-    }
+    if (this.p.keyCode === this.p.RIGHT_ARROW) this.alpha = this.p.lerp(this.alpha, 0.5, 0.05);
+    if (this.p.keyCode === this.p.LEFT_ARROW) this.alpha = this.p.lerp(this.alpha, 0.001, 0.05);
+    if (this.p.key === "d") this.draw_dot = !this.draw_dot;
   }
 }
+
 
 export default ArtistMap;
