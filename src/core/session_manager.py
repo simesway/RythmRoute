@@ -6,7 +6,7 @@ from fastapi import Request, Response
 from pydantic import BaseModel, Field
 from typing import Optional
 
-from src.config import SESSION_USER_EXPIRE_TIME
+from src.config import SESSION_USER_EXPIRE_TIME, SESSION_COOKIE_NAME
 from src.core.redis_client import redis_client
 from src.models.PlaylistEditor import PlaylistEditor
 from src.models.PlaylistFactory import PlaylistFactory
@@ -16,7 +16,7 @@ logger.setLevel(logging.DEBUG)
 
 
 COOKIE_PARAMS = dict(
-    key="session_id",
+    key=SESSION_COOKIE_NAME,
     httponly=True,
     secure=True,
     samesite="Lax",
