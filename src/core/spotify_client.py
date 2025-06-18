@@ -3,7 +3,7 @@ from spotipy import Spotify
 from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth, SpotifyOauthError
 from spotipy.cache_handler import CacheHandler, RedisCacheHandler
 from src.core.redis_client import redis_sync
-from src.config import SPOTIPY_CLIENT_ID,  SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, SPOTIPY_SCOPE, SESSION_USER_EXPIRE_TIME
+from src.config import SpotifyConfig, SessionConfig
 
 logger = logging.getLogger("SpotifyClient")
 logging.basicConfig(level=logging.INFO)
@@ -20,8 +20,8 @@ class NoCacheHandler(CacheHandler):
 class SpotifyClient:
   def __init__(self):
     self.auth_manager = SpotifyClientCredentials(
-      client_id=SPOTIPY_CLIENT_ID,
-      client_secret=SPOTIPY_CLIENT_SECRET,
+      client_id=SpotifyConfig.client_id,
+      client_secret=SpotifyConfig.client_secret,
       cache_handler=NoCacheHandler()
     )
 
@@ -36,7 +36,7 @@ class SpotifyUserClient:
     self.sp_oauth = self._get_oauth_handler()
 
   def _reset_expiration(self):
-    redis_sync.expire(self.key, SESSION_USER_EXPIRE_TIME)
+    redis_sync.expire(self.key, SessionConfig.ttl)
 
   def get_spotify_client(self):
     token_info = self.sp_oauth.validate_token(self.cache_handler.get_cached_token())
@@ -62,9 +62,9 @@ class SpotifyUserClient:
 
   def _get_oauth_handler(self):
     return SpotifyOAuth(
-      client_id=SPOTIPY_CLIENT_ID,
-      client_secret=SPOTIPY_CLIENT_SECRET,
-      redirect_uri=SPOTIPY_REDIRECT_URI,
-      scope=SPOTIPY_SCOPE,
+      client_id=SpotifyConfig.client_id,
+      client_secret=SpotifyConfig.client_secret,
+      redirect_uri=SpotifyConfig.redirect_uri,
+      scope=SpotifyConfig.scope,
       cache_handler=self.cache_handler
     )

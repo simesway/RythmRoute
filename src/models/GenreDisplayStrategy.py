@@ -4,7 +4,7 @@ from networkx.drawing.nx_agraph import graphviz_layout
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Set
 
-from src import config
+from src.config import Settings
 from src.database.models import RelationshipTypeEnum
 from src.models.SessionResponse import Genre, GenreRelationship, Coordinate
 from src.core.GenreGraph import GenreGraph
@@ -65,7 +65,7 @@ class DisplayStrategy(ABC):
       for rel in node_edges.get("links", [])
     ]
     layout = {
-      genre_id: Coordinate(x=round(pos["x"], config.DEC_PREC), y=round(pos["y"], config.DEC_PREC))
+      genre_id: Coordinate(x=round(pos["x"], Settings.decimal_precision), y=round(pos["y"], Settings.decimal_precision))
       for genre_id, pos in layout.items()
     }
 

@@ -14,6 +14,7 @@ uvicorn
 pygraphviz
 pydot
 pydantic
+pydantic-settings
 spotipy
 beautifulsoup4
 numpy

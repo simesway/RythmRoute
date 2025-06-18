@@ -6,7 +6,7 @@ from sqlalchemy.orm import joinedload
 from datetime import datetime, timedelta
 
 from random import random
-from src.config import DB_SCRAPE_TIME_DELTA_DAYS, CACHE_OBJECT_TTL
+from src.config import CacheConfig
 from src.core.db import SessionLocal
 from src.database.models import Genre, ArtistInGenre
 from src.core.redis_client import redis_sync
@@ -43,7 +43,7 @@ class ArtistHandler:
 
   @staticmethod
   def load_pool_to_redis(pool: ArtistPool):
-    redis_sync.setex(f"pool:genre:{int(pool.genre_id)}", CACHE_OBJECT_TTL, pool.model_dump_json())
+    redis_sync.setex(f"pool:genre:{int(pool.genre_id)}", CacheConfig.artist_pool, pool.model_dump_json())
 
   @staticmethod
   def load_pool_from_redis(genre_id) -> Optional[ArtistPool]:
@@ -84,7 +84,7 @@ class ArtistHandler:
     }
 
   def get_and_update_artists(self, genre_id: int) -> List[Artist]:
-    cutoff = datetime.now() - timedelta(days=int(DB_SCRAPE_TIME_DELTA_DAYS))
+    cutoff = datetime.now() - timedelta(days=CacheConfig.scrape_time_delta_days)
     with SessionLocal() as session:
       genre = (
         session.query(Genre)

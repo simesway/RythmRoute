@@ -6,7 +6,7 @@ from fastapi import Request, Response
 from pydantic import BaseModel, Field
 from typing import Optional
 
-from src.config import SESSION_USER_EXPIRE_TIME, SESSION_COOKIE_NAME
+from src.config import SessionConfig
 from src.core.redis_client import redis_client
 from src.models.PlaylistEditor import PlaylistEditor
 from src.models.PlaylistFactory import PlaylistFactory
@@ -16,11 +16,11 @@ logger.setLevel(logging.DEBUG)
 
 
 COOKIE_PARAMS = dict(
-    key=SESSION_COOKIE_NAME,
+    key=SessionConfig.cookie_name,
     httponly=True,
     secure=True,
     samesite="Lax",
-    max_age=SESSION_USER_EXPIRE_TIME,
+    max_age=SessionConfig.ttl,
 )
 
 
@@ -32,7 +32,7 @@ class SessionData(BaseModel):
 
 async def refresh_ttl_and_cookie(session_id: str, response: Response):
   logger.debug(f"Refreshed session TTL and cookie: {session_id}")
-  await redis_client.expire(session_id, SESSION_USER_EXPIRE_TIME)
+  await redis_client.expire(session_id, SessionConfig.ttl)
   response.set_cookie(value= session_id, **COOKIE_PARAMS)
 
 async def create_session(response: Response) -> SessionData:
@@ -54,7 +54,7 @@ async def create_session_once(session_id: str) -> SessionData:
   session_json = session_data.model_dump_json()
   was_set = await redis_client.setnx(session_id, session_json)
   if was_set:
-    await redis_client.expire(session_id, SESSION_USER_EXPIRE_TIME)
+    await redis_client.expire(session_id, SessionConfig.ttl)
     logger.info(f"Created new session: {session_id}")
     return session_data
   else:
@@ -73,7 +73,7 @@ async def store_session(session_data: SessionData):
   """Stores validated session data in Redis."""
   session_id = session_data.id
   session_json = session_data.model_dump_json()  # Convert to dictionary
-  await redis_client.setex(session_id, SESSION_USER_EXPIRE_TIME, session_json)
+  await redis_client.setex(session_id, SessionConfig.ttl, session_json)
   logger.debug(f"Stored session in redis: {session_id}")
 
 

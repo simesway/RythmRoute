@@ -2,13 +2,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from src.database.models import Base
-from src.config import DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME
+from src.config import DBConfig as DB
 
 
 def connection_string():
-  return f'postgresql+psycopg2://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+  return f'postgresql+psycopg2://{DB.username}:{DB.password}@{DB.host}:{DB.port}/{DB.name}'
 
-engine = create_engine(connection_string(), echo=True)
+engine = create_engine(connection_string(), echo=False)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

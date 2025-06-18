@@ -4,22 +4,14 @@ from spotipy import SpotifyException
 from typing import List, Literal, Optional, Type
 import logging
 
+from src.config import CacheConfig, SpotifyConfig
 from src.core.redis_client import redis_sync
 from src.core.spotify_client import SpotifyClient, SpotifyUserClient
 
 logger = logging.getLogger(__name__)
 
-
-class CacheConfig:
-  SINGLE_OBJECT_TTL = 86400  # 1 day
-  TOP_TRACKS_TTL = 86400
-  ALBUMS_TTL = 86400
-  ALBUM_TRACKS_TTL = 86400
-  MAX_ALBUM_BATCH = 20 # limit by spotify web api
-  MAX_ARTIST_BATCH = 50 # limit by spotify web api
-
-
 AlbumType = Literal['album', 'compilation', 'ep', 'single']
+Exceptions = (SpotifyException, Exception)
 
 
 class SpotifyModel(BaseModel):
@@ -154,13 +146,19 @@ class SpotifyCache:
     if data:
       return SpotifyUser.model_validate_json(data)
 
-    sp = SpotifyUserClient(session_id).get_spotify_client()
-    if sp is None:
-      return None
-    logger.info("Caching Spotify User")
-    data = self.converter.to_user(sp.me())
-    self.redis.setex(key, CacheConfig.SINGLE_OBJECT_TTL, data.model_dump_json())
-    return data
+    try:
+      sp = SpotifyUserClient(session_id).get_spotify_client()
+      if sp is None:
+        return None
+      logger.info("Caching Spotify User")
+      data = self.converter.to_user(sp.me())
+      self.redis.setex(key, CacheConfig.single_object, data.model_dump_json())
+      return data
+    except SpotifyException as e:
+        logger.warning(f"SpotifyException in get_track: {e}")
+    except Exception as e:
+        logger.error(f"Unhandled error in get_track: {e}")
+    return None
 
   def get_track(self, track_id: str) -> Optional[Track]:
     key = f"track:{track_id}"
@@ -171,7 +169,7 @@ class SpotifyCache:
         logger.info(f"Caching Track: {track_id}")
         track = self.spotify.track(track_id)
         data = self.converter.to_track(track)
-        self.redis.setex(key, CacheConfig.SINGLE_OBJECT_TTL, data.model_dump_json())
+        self.redis.setex(key, CacheConfig.single_object, data.model_dump_json())
         return data
     except SpotifyException as e:
         logger.warning(f"SpotifyException in get_track: {e}")
@@ -189,7 +187,7 @@ class SpotifyCache:
       logger.info(f"Caching Album: {album_id}")
       album = self.spotify.album(album_id)
       data = self.converter.to_album(album)
-      self.redis.setex(key, CacheConfig.SINGLE_OBJECT_TTL, data.model_dump_json())
+      self.redis.setex(key, CacheConfig.single_object, data.model_dump_json())
       return data
     except SpotifyException as e:
         logger.warning(f"SpotifyException in get_album: {e}")
@@ -207,7 +205,7 @@ class SpotifyCache:
       logger.info(f"Caching Artist: {artist_id}")
       artist = self.spotify.artist(artist_id)
       data = self.converter.to_artist(artist)
-      self.redis.setex(key, CacheConfig.SINGLE_OBJECT_TTL, data.model_dump_json())
+      self.redis.setex(key, CacheConfig.single_object, data.model_dump_json())
       return data
     except SpotifyException as e:
       logger.warning(f"SpotifyException in get_artist: {e}")
@@ -228,14 +226,14 @@ class SpotifyCache:
       else:
         uncached_ids.append(album_id)
 
-    for i in range(0, len(uncached_ids), CacheConfig.MAX_ALBUM_BATCH):
-      batch = uncached_ids[i:i+CacheConfig.MAX_ALBUM_BATCH]
+    for i in range(0, len(uncached_ids), SpotifyConfig.max_album_batch):
+      batch = uncached_ids[i:i+SpotifyConfig.max_album_batch]
       logger.info(f"Caching Album Batch: {batch}")
       try:
         fetched = self.spotify.albums(batch)['albums']
         converted = [self.converter.to_album(a) for a in fetched]
         for album in converted:
-          self.redis.setex(f"album:{album.id}", CacheConfig.SINGLE_OBJECT_TTL, album.model_dump_json())
+          self.redis.setex(f"album:{album.id}", CacheConfig.single_object, album.model_dump_json())
         results.extend(converted)
       except SpotifyException as e:
         logger.warning(f"SpotifyException in get_albums: {e}")
@@ -256,17 +254,17 @@ class SpotifyCache:
       else:
         uncached_ids.append(artist_id)
 
-    for i in range(0, len(uncached_ids), CacheConfig.MAX_ARTIST_BATCH):
-      batch = uncached_ids[i:i+CacheConfig.MAX_ARTIST_BATCH]
+    for i in range(0, len(uncached_ids), SpotifyConfig.max_artist_batch):
+      batch = uncached_ids[i:i+SpotifyConfig.max_artist_batch]
       logger.info(f"Caching Artist Batch: {batch}")
       try:
         fetched = self.spotify.artists(batch)['artists']
         converted = [self.converter.to_artist(a) for a in fetched]
         for artist in converted:
-          self.redis.setex(f"artist:{artist.id}", CacheConfig.SINGLE_OBJECT_TTL, artist.model_dump_json())
+          self.redis.setex(f"artist:{artist.id}", CacheConfig.single_object, artist.model_dump_json())
         results.extend(converted)
       except SpotifyException as e:
-        logger.warning(f"SpotifyException in get_albums: {e}")
+        logger.warning(f"SpotifyException in get_artists: {e}")
         continue
 
     return results
@@ -281,7 +279,7 @@ class SpotifyCache:
       logger.info(f"Caching Top Tracks: {artist_id}")
       tracks = self.spotify.artist_top_tracks(artist_id)['tracks']
       data = [self.converter.to_track(t) for t in tracks]
-      self.redis.setex(key, CacheConfig.TOP_TRACKS_TTL, self.converter.serialize(data))
+      self.redis.setex(key, CacheConfig.top_tracks, self.converter.serialize(data))
       return data
     except SpotifyException as e:
       logger.warning(f"SpotifyException in get_top_tracks: {e}")
@@ -302,7 +300,7 @@ class SpotifyCache:
         include_groups='album,compilation,single,ep'
       )['items']
       data = [self.converter.to_album(a) for a in albums]
-      self.redis.setex(key, CacheConfig.ALBUMS_TTL, self.converter.serialize(data))
+      self.redis.setex(key, CacheConfig.releases, self.converter.serialize(data))
       return data
     except SpotifyException as e:
       logger.warning(f"SpotifyException in get_releases: {e}")
@@ -320,10 +318,10 @@ class SpotifyCache:
       tracks = self.spotify.album_tracks(album_id)['items']
       logger.info(f"Caching Album Tracks: {album_id}")
       data = [self.converter.to_track(t, album_id) for t in tracks]
-      self.redis.setex(key, CacheConfig.ALBUM_TRACKS_TTL, self.converter.serialize(data))
+      self.redis.setex(key, CacheConfig.album_tracks, self.converter.serialize(data))
       return data
     except SpotifyException as e:
-      logger.warning(f"SpotifyException in get_releases: {e}")
+      logger.warning(f"SpotifyException in get_album_tracks: {e}")
     except Exception as e:
-      logger.error(f"Unhandled error in get_releases: {e}")
+      logger.error(f"Unhandled error in get_album_tracks: {e}")
     return []

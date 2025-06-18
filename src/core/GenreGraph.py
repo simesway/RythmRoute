@@ -2,7 +2,7 @@ import networkx as nx
 from threading import Lock
 from collections import deque
 
-from src import config
+from src.config import Settings
 from src.core.db import SessionLocal
 from src.database.models import RelationshipTypeEnum, Genre
 from src.database.selects import get_all_mb_genres, get_all_relationships
@@ -61,8 +61,8 @@ class GenreGraph:
     with cls.lock:
       for genre in genres:
         genre = genre[0]
-        b = round((genre.bouncy_value - b_min) / (b_max - b_min), config.DEC_PREC) if genre.bouncy_value else None
-        o = round((genre.organic_value - o_min) / (o_max - o_min), config.DEC_PREC) if genre.organic_value else None
+        b = round((genre.bouncy_value - b_min) / (b_max - b_min), Settings.decimal_precision) if genre.bouncy_value else None
+        o = round((genre.organic_value - o_min) / (o_max - o_min), Settings.decimal_precision) if genre.organic_value else None
         cls.G.add_node(
           genre.id,
           name=genre.name,
