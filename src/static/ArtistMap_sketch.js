@@ -16,7 +16,7 @@ let artistMapSketch = (p) => {
   };
 
   p.draw = () => {
-    p.background("#838383");
+    p.background("#EEE");
 
     artist_map.draw();
     p.noStroke()

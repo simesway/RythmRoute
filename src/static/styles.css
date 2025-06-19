@@ -32,22 +32,6 @@ body {
   min-height: 0; /* Remove the full viewport height restriction */
 }
 
-.card-container {
-  display: flex;
-  flex-direction: row;
-}
-
-.card {
-  display: flex;
-  flex-direction: column;
-  flex: 0 0 auto;  /* Prevent the rows from forcing full height, but they will grow as needed */
-  min-height: 0; /* Remove the full viewport height restriction */
-  margin: 10px;
-  padding: 15px;
-  border-style: solid;
-  border-width: 1px;
-}
-
 .track-item {
   display: grid;
   grid-template-columns: auto 2fr 2fr auto;

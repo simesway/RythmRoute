@@ -16,7 +16,7 @@ let genreMapSketch = (p) => {
   };
 
   p.draw = () => {
-    p.background("#838383");
+    p.background("#EEE");
     genre_map.update(0.05);
     genre_map.draw();
     p.strokeWeight(2);

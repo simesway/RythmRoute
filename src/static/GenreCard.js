@@ -214,8 +214,7 @@ class GenreCard {
 
     container.querySelectorAll(".strategy").forEach(strategy => {
       const type = strategy.dataset.type;
-      const strategyConfig = savedStrats.find(s => s.strategy.type === type) || null;
-      console.log(type, strategyConfig)
+      const strategyConfig = savedStrats ? savedStrats.find(s => s.strategy.type === type) || null : null;
 
       const enable = strategy.querySelector('.enable-strategy');
       const weight = strategy.querySelector('.weight');

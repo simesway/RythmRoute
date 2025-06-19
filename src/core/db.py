@@ -1,3 +1,4 @@
+import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -7,6 +8,8 @@ from src.config import DBConfig as DB
 
 def connection_string():
   return f'postgresql+psycopg2://{DB.username}:{DB.password}@{DB.host}:{DB.port}/{DB.name}'
+
+logging.info(f'Connecting to database at {DB.host}:{DB.port}/{DB.name}')
 
 engine = create_engine(connection_string(), echo=False)
 
