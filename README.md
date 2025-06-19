@@ -110,4 +110,7 @@ RythmRoute uses **PostgreSQL** to store music data scraped from [everynoise.com]
 
 ## Known limitations
 - The genre graph is incomplete (missing genre relationships).
-- Not optimized for deployment on a remote server (most time/computational expensive features are in sync).
+- Not optimized for deployment on a remote server (most time/computational expensive features are in sync).- Server responses on user input are not optimized (Current State is being fully recomputed and sent).
+- Server responses on user input are not optimized (current state is fully recomputed and sent).
+- Error handling is incomplete and not all errors are adequately managed.
+- The UI is not yet fully intuitive or self-explanatory.
