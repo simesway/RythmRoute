@@ -34,7 +34,7 @@ The goal is to provide transparency and control over the playlist creation proce
 
 1. **Clone the repository**
 ```bash
-git clone 
+git clone https://github.com/simesway/RythmRoute.git
 cd RythmRoute
 ```
 
@@ -49,22 +49,37 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-4. **Modify the .env file**
-- Copy the template `src/.env.template` file.
-- Fill the missing environment variables.
+4. **Database-Setup**
 
-5. **Set up the database**
-- Provide a valid PostgreSQL connection string in the `.env`-file (SQLAlchemy uses this to connect).
-- A compact SQL dump file `data.sql` is included to initialize the database with pre-scraped data.
-- Import the dump into your PostgreSQL database:
+- Create an empty PostgreSQL database.
+- Initialize custom types and tables:
+```bash
+python src/scripts/db-init.py
+```
+- Import the data:
 ```bash
 psql -U <user> -d <dbname> -f data.sql
 ```
-- Optionally execute the Scraping scripts directly.
+
+5. **Modify the .env file**
+- Copy the template `src/.env.template` file.
+```bash
+cp src/.env.template src/.env
+```
+- Fill the missing environment variables:
+  - **PostgreSQL**: username, password, host, port, name
+  - **Redis**: host, port
+  - **Spotify**: client-id, client-secret
+    1. sign in to Spotify on [developer.spotify.com](https://developer.spotify.com)
+    2. go to the API Dashboard and "Create app"
+    3. add `http://localhost:8000/spotify/callback` to the list of "Redirect URIs"
+    4. check Web API under "APIs used"
+    5. Save settings
+    6. add Client ID and Client Secret to the `.env`
 
 6. **Start the server**
 ```bash
-uvicorn server:app --reload
+uvicorn server:app --reload --port 8000
 ```
 
 7. **Access the app**
@@ -72,5 +87,27 @@ uvicorn server:app --reload
 http://127.0.0.1:8000
 ```
 
+## Database
 
+RythmRoute uses **PostgreSQL** to store music data scraped from [everynoise.com](https://everynoise.com) and [musicbrainz.org](https://musicbrainz.org).
 
+### Tables
+- **Genre** represents a music genre with its name and additional data.
+- **Artist** Represents an artist with metadata such as name, Spotify ID, popularity, follower count, and Spotify genre tags.
+- **Genre Relationship** Models how genres relate to each other (`SUBGENRE_OF`, `INFLUENCED_BY`, `FUSION_OF`). This enables traversal through the genre graph for discovery and visualization.
+- **Artist-Genre Links** Connects artists to genres with additional attributes that position the artist within its genres.
+
+### Attributes
+- **Organic Value**: lower values indicate more organic (natural, acoustic) music; higher values more mechanical or electric.
+- **Bouncy Value**: Lower values indicate denser, more atmospheric music; higher values spikier, more bouncy.
+
+## Planned Features
+- Advanced playlist sorting strategies (e.g. order tracks from bouncy to atmospheric).
+- Load and modify existing Spotify playlists.
+- Automatically regenerate playlist periodically (useful on a remote server).
+- Expand genre relationships (currently ~3200 on ~7500 genres).
+- Country and regional data for advanced exploration.
+
+## Known limitations
+- The genre graph is incomplete (missing genre relationships).
+- Not optimized for deployment on a remote server (most time/computational expensive features are in sync).
