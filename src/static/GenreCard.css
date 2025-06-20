@@ -1,6 +1,6 @@
 #artist-panel {
     display: flex;
-    height: 70vh;
+    height: 80vh;
 }
 
 #card-container {
@@ -13,6 +13,7 @@
 }
 
 .card {
+    border-radius: 0.5rem;
   display: flex;
   flex-direction: column;
   flex: 0 0 auto;  /* Prevent the rows from forcing full height, but they will grow as needed */

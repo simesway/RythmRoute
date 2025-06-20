@@ -35,7 +35,7 @@
 		      flex: 4;
           margin: 0;
           width: 100%;
-          height: 70vh;
+          height: 80vh;
           overflow: hidden;
           position: relative;
       }
@@ -73,19 +73,26 @@
 	</style>
 </head>
 <body>
+<h3>Genres</h3>
 <section id="genre-panel">
+	<div>
+		Left-click: expand/collapse | Right-click: select/deselect
+	</div>
 	<div class="canvas-container">
 		<div id="genre-graph" class="p5_canvas"></div>
 	</div>
 </section>
 
+<h3>Artists</h3>
 <section id="artist-panel">
 	<div id="card-container" ></div>
 	<div class="canvas-container">
+		<div style="text-align: center">In general down is more organic, up is more mechanical and electric; left is denser and more atmospheric, right is spikier and bouncier.</div>
 		<div id="artist-map" class="p5_canvas"></div>
 	</div>
 </section>
 
+<h3>Playlist</h3>
 <section id="playlist">
 	<div id="playlist-container"></div>
 </section>
