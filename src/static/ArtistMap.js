@@ -129,15 +129,18 @@ class ArtistMap {
 
   draw_legend() {
     const { width: w, height: h } = this.p;
-    const pad = 100;
+    const pad = 110;
     this.p.textAlign(this.p.CENTER, this.p.CENTER);
     this.p.textSize(30);
-    this.p.noStroke();
+    this.p.strokeWeight(3);
+    this.p.stroke(0);
+    this.p.textStyle(this.p.BOLD);
 
     this.p.fill(this.electric_color); this.p.text("electric", w/2, pad);
     this.p.fill(this.organic_color); this.p.text("organic", w/2, h - pad);
     this.p.fill(this.atmospheric_color); this.p.text("atmospheric", pad, h/2);
     this.p.fill(this.bouncy_color); this.p.text("bouncy", w - pad, h/2);
+    this.p.textStyle(this.p.NORMAL)
   }
 
   draw() {
