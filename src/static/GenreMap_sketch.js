@@ -12,7 +12,6 @@ let genreMapSketch = (p) => {
     canvas.parent(container);
     genre_map = new GenreMap(p);
     canvas.elt.oncontextmenu = () => false;
-    p.frameRate(30);
   };
 
   p.draw = () => {
@@ -22,11 +21,6 @@ let genreMapSketch = (p) => {
     p.strokeWeight(2);
     p.stroke(0);
     p.line(p.mouseX, p.mouseY, p.pmouseX, p.pmouseY);
-    p.fill(0);
-    p.noStroke();
-    p.textAlign(p.LEFT, p.CENTER);
-    p.textSize(16);
-    p.text("FPS: " + p.frameRate().toFixed(2), 10, 20);
   };
 
   p.windowResized = () => {

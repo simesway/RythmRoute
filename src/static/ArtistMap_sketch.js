@@ -19,11 +19,6 @@ let artistMapSketch = (p) => {
     p.background("#EEE");
 
     artist_map.draw();
-    p.noStroke()
-    p.fill(0);
-    p.textSize(16);
-    p.textAlign(p.LEFT, p.CENTER);
-    p.text("FPS: " + p.frameRate().toFixed(2), 10, 20);
   };
 
   p.windowResized = () => {
