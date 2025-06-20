@@ -14,8 +14,12 @@ The goal is to provide transparency and control over the playlist creation proce
 ## Features
 
 - **Genre graph navigation:** Navigate through a graph of ~7500 genres and 2500 relationships (subgenres, fusion genres, influenced-by links).
-- **Artist sampling:** Filter and weight artist selection within chosen genres.
-- **Song sampling:** Use customizable strategies (e.g. top songs, random release, cluster by album type, nearest release date).
+- **Artist attribute-based sampling:** 
+  - Filter and weight per attribute
+  - Several weight computation modes (rank-based, log, softmax)
+- **Song sampling:** 
+  - Use customizable strategies (e.g. top songs, random release, cluster by album type, nearest release date).
+  - Filter Core Tracks (main versions of songs — not remixes, live recordings, bonus versions, demos, edits, or similar alternate forms.)
 - **Playlist creation and updating:** Build or modify Spotify playlists directly from the app.
 - **Resampling:** Sampling steps can be repeated any number of times.
 - **Graph visualizations:** 
@@ -110,7 +114,7 @@ RythmRoute uses **PostgreSQL** to store music data scraped from [everynoise.com]
 
 ## Known limitations
 - The genre graph is incomplete (missing genre relationships).
-- Not optimized for deployment on a remote server (most time/computational expensive features are in sync).- Server responses on user input are not optimized (Current State is being fully recomputed and sent).
+- Not optimized for deployment on a remote server (most time/computational expensive features are in sync).
 - Server responses on user input are not optimized (current state is fully recomputed and sent).
 - Error handling is incomplete and not all errors are adequately managed.
 - The UI is not yet fully intuitive or self-explanatory.
