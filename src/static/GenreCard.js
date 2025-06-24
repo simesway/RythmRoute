@@ -161,8 +161,8 @@ class GenreCard {
       filters.push({
         type: "AttributeFilter",
         attr: attr,
-        min: min,
-        max: max
+        min: attr === "popularity"? min * 100 : min,
+        max: attr === "popularity"? max * 100 : max
       });
     });
 
