@@ -174,16 +174,32 @@ class ArtistMap {
       if (!card?.querySelector(".card-content") || card.querySelector(".card-content").style.display === "none") continue;
 
       for (let artist of pool.artists) {
-        const adj_b = pool.bouncyness + alpha * (artist.bouncyness - 0.5);
-        const adj_o = pool.organicness + alpha * (artist.organicness - 0.5);
-        const x = this.scale(adj_b, b_min, b_max, 0, w) + pad;
-        const y = this.scale(adj_o, o_min, o_max, 0, h) + pad;
-        const d = this.p.dist(this.p.mouseX, this.p.mouseY, x, y);
-        const R = 8 + artist.popularity / 5;
-        if (d < R) [hovered, hovered_pool] = [artist, pool];
-        const color_b = pool.sampled.includes(Number(artist.id)) ? this.p.color(255,0,0) : this.p.lerpColor(this.atmospheric_color, this.bouncy_color, pool.bouncyness);
-        const color_o = pool.sampled.includes(Number(artist.id)) ? this.p.color(255) : this.p.lerpColor(this.electric_color, this.organic_color, pool.organicness);
-        this.draw_dot ? artist.draw_dot(this.p, x, y, color_o, color_b) : artist.draw(this.p, x, y, color_o, color_b);
+        if (!pool.sampled.includes(Number(artist.id))){
+          const adj_b = pool.bouncyness + alpha * (artist.bouncyness - 0.5);
+          const adj_o = pool.organicness + alpha * (artist.organicness - 0.5);
+          const x = this.scale(adj_b, b_min, b_max, 0, w) + pad;
+          const y = this.scale(adj_o, o_min, o_max, 0, h) + pad;
+          const d = this.p.dist(this.p.mouseX, this.p.mouseY, x, y);
+          const R = 8 + artist.popularity / 5;
+          if (d < R) [hovered, hovered_pool] = [artist, pool];
+          const color_b = this.p.lerpColor(this.atmospheric_color, this.bouncy_color, adj_b);
+          const color_o = this.p.lerpColor(this.electric_color, this.organic_color, adj_o);
+          this.draw_dot ? artist.draw_dot(this.p, x, y, color_o, color_b) : artist.draw(this.p, x, y, color_o, color_b);
+        }
+      }
+      for (let artist of pool.artists) {
+        if (pool.sampled.includes(Number(artist.id))){
+          const adj_b = pool.bouncyness + alpha * (artist.bouncyness - 0.5);
+          const adj_o = pool.organicness + alpha * (artist.organicness - 0.5);
+          const x = this.scale(adj_b, b_min, b_max, 0, w) + pad;
+          const y = this.scale(adj_o, o_min, o_max, 0, h) + pad;
+          const d = this.p.dist(this.p.mouseX, this.p.mouseY, x, y);
+          const R = 8 + artist.popularity / 5;
+          if (d < R) [hovered, hovered_pool] = [artist, pool];
+          const color_b = this.p.color(255,0,0);
+          const color_o = this.p.color(255);
+          this.draw_dot ? artist.draw_dot(this.p, x, y, color_o, color_b) : artist.draw(this.p, x, y, color_o, color_b);
+        }
       }
     }
 
